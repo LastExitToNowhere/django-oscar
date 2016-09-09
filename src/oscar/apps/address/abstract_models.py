@@ -10,6 +10,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.translation import pgettext_lazy
 
 from oscar.core.compat import AUTH_USER_MODEL
+from oscar.core.decorators import deprecated
 from oscar.models.fields import PhoneNumberField, UppercaseCharField
 
 
@@ -155,7 +156,7 @@ class AbstractAddress(models.Model):
         'NE': r'^[0-9]{4}$',
         'NF': r'^[0-9]{4}$',
         'NG': r'^[0-9]{6}$',
-        'NI': r'^[0-9]{3}-[0-9]{3}-[0-9]$',
+        'NI': r'^[0-9]{5}$',
         'NL': r'^[0-9]{4}[A-Z]{2}$',
         'NO': r'^[0-9]{4}$',
         'NP': r'^[0-9]{5}$',
@@ -504,7 +505,12 @@ class AbstractUserAddress(AbstractShippingAddress):
     #: We keep track of the number of times an address has been used
     #: as a shipping address so we can show the most popular ones
     #: first at the checkout.
-    num_orders = models.PositiveIntegerField(_("Number of Orders"), default=0)
+    num_orders_as_shipping_address = models.PositiveIntegerField(
+        _("Number of Orders as Billing Address"), default=0)
+
+    #: Same as previous, but for billing address.
+    num_orders_as_billing_address = models.PositiveIntegerField(
+        _("Number of Orders as Shipping Address"), default=0)
 
     #: A hash is kept to try and avoid duplicate addresses being added
     #: to the address book.
@@ -540,7 +546,7 @@ class AbstractUserAddress(AbstractShippingAddress):
         app_label = 'address'
         verbose_name = _("User address")
         verbose_name_plural = _("User addresses")
-        ordering = ['-num_orders']
+        ordering = ['-num_orders_as_shipping_address']
         unique_together = ('user', 'hash')
 
     def validate_unique(self, exclude=None):
@@ -554,6 +560,11 @@ class AbstractUserAddress(AbstractShippingAddress):
             raise exceptions.ValidationError({
                 '__all__': [_("This address is already in your address"
                               " book")]})
+
+    @property
+    @deprecated
+    def num_orders(self):
+        return self.num_orders_as_shipping_address
 
 
 class AbstractBillingAddress(AbstractAddress):
