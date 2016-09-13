@@ -8,7 +8,9 @@ class UserAddressAdmin(admin.ModelAdmin):
 
 
 class CountryAdmin(admin.ModelAdmin):
-    search_fields = ('name',)
+    list_display = ('printable_name', 'name', 'iso_3166_1_a2', 'is_shipping_country')
+    search_fields = ('name', 'printable_name', 'iso_3166_1_a2')
+    list_filter = ['is_shipping_country']
 
 
 admin.site.register(get_model('address', 'useraddress'), UserAddressAdmin)
