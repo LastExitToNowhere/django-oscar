@@ -5,6 +5,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import NoReverseMatch, reverse
 from django.http import HttpResponseRedirect
+from django.db.utils import IntegrityError
 
 from oscar.core.loading import get_class, get_model
 
@@ -180,8 +181,10 @@ class OrderPlacementMixin(CheckoutSessionMixin):
             user_addr.num_orders_as_shipping_address += 1
         if isinstance(addr, BillingAddress):
             user_addr.num_orders_as_billing_address += 1
-        user_addr.save()
-
+        try:
+            user_addr.save()
+        except IntegrityError:
+            logger.warning("IntegrityError when saving address %s", user_addr)
     def create_billing_address(self, user, billing_address=None,
                                shipping_address=None, **kwargs):
         """
