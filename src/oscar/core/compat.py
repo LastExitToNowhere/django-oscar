@@ -156,6 +156,11 @@ class UnicodeCSVWriter:
                           encoding=self.encoding, newline='')
         else:
             self.f = open(self.filename, 'wb')
+            # Set byte order mark at the beginning of the
+            # file for better compatibility with readers like MS Excel.
+            # self.f.write(codecs.BOM_UTF8)
+            if self.encoding == "utf-8":
+                self.writerow(u'\ufeff')
         return self
 
     def __exit__(self, type, value, traceback):
