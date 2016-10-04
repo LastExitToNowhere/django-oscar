@@ -195,6 +195,8 @@ class AbstractStockRecord(models.Model):
                 default=F('num_allocated') + quantity
             ),
         )
+        # Save the associated product to trigger its post_save signal
+        self.product.save()
     allocate.alters_data = True
 
     def is_allocation_consumption_possible(self, quantity):
@@ -217,6 +219,8 @@ class AbstractStockRecord(models.Model):
             num_allocated=F('num_allocated') - quantity,
             num_in_stock=F('num_in_stock') - quantity,
         )
+        # Save the associated product to trigger its post_save signal
+        self.product.save()
     consume_allocation.alters_data = True
 
     def cancel_allocation(self, quantity):
@@ -225,6 +229,8 @@ class AbstractStockRecord(models.Model):
         self.__class__.objects.filter(pk=self.pk).update(
             num_allocated=F('num_allocated') - min(self.num_allocated, quantity),
         )
+        # Save the associated product to trigger its post_save signal
+        self.product.save()
     cancel_allocation.alters_data = True
 
     @property
