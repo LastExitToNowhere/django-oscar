@@ -1,5 +1,4 @@
 from django.db import models
-from django.db.models import Case, F, When
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
@@ -187,16 +186,10 @@ class AbstractStockRecord(models.Model):
         This normally happens when a product is bought at checkout.  When the
         product is actually shipped, then we 'consume' the allocation.
         """
-
-        self.__class__.objects.select_for_update().filter(pk=self.pk).update(
-            num_allocated=Case(
-                When(num_allocated__isnull=True,
-                     then=(0 + quantity)),
-                default=F('num_allocated') + quantity
-            ),
-        )
-        # Save the associated product to trigger its post_save signal
-        self.product.save()
+        if self.num_allocated is None:
+            self.num_allocated = 0
+        self.num_allocated += quantity
+        self.save()
     allocate.alters_data = True
 
     def is_allocation_consumption_possible(self, quantity):
@@ -215,22 +208,16 @@ class AbstractStockRecord(models.Model):
         if not self.is_allocation_consumption_possible(quantity):
             raise InvalidStockAdjustment(
                 _('Invalid stock consumption request'))
-        self.__class__.objects.filter(pk=self.pk).update(
-            num_allocated=F('num_allocated') - quantity,
-            num_in_stock=F('num_in_stock') - quantity,
-        )
-        # Save the associated product to trigger its post_save signal
-        self.product.save()
+        self.num_allocated -= quantity
+        self.num_in_stock -= quantity
+        self.save()
     consume_allocation.alters_data = True
 
     def cancel_allocation(self, quantity):
         # We ignore requests that request a cancellation of more than the
         # amount already allocated.
-        self.__class__.objects.filter(pk=self.pk).update(
-            num_allocated=F('num_allocated') - min(self.num_allocated, quantity),
-        )
-        # Save the associated product to trigger its post_save signal
-        self.product.save()
+        self.num_allocated -= min(self.num_allocated, quantity)
+        self.save()
     cancel_allocation.alters_data = True
 
     @property
