@@ -6,7 +6,6 @@ from django.core import mail
 from django.db.models import Max
 from django.template import Context, loader
 
-from oscar.apps.customer.notifications import services
 from oscar.core.loading import get_class, get_model
 
 ProductAlert = get_model('customer', 'ProductAlert')
@@ -68,23 +67,24 @@ def send_product_alerts(product):
     # Determine 'hurry mode'
     num_alerts = alerts.count()
     if num_stockrecords == 1:
-        num_in_stock = stockrecords[0].num_in_stock
-        # hurry_mode is false if num_in_stock is None
-        hurry_mode = num_in_stock is not None and num_alerts > num_in_stock
+        num_in_stock = stockrecords[0].net_stock_level
+        if num_in_stock < 3:
+            hurry_mode = True
+        else:
+            # hurry_mode is false if num_in_stock is 0
+            hurry_mode = num_in_stock is not 0 and num_alerts > num_in_stock
     else:
         result = stockrecords.aggregate(max_in_stock=Max('num_in_stock'))
         hurry_mode = result['max_in_stock'] is not None and \
             num_alerts > result['max_in_stock']
 
     # Load templates
-    message_tpl = loader.get_template('customer/alerts/message.html')
     email_subject_tpl = loader.get_template('customer/alerts/emails/'
                                             'alert_subject.txt')
     email_body_tpl = loader.get_template('customer/alerts/emails/'
                                          'alert_body.txt')
 
     emails = []
-    num_notifications = 0
     selector = Selector()
     for alert in alerts:
         # Check if the product is available to this user
@@ -98,10 +98,6 @@ def send_product_alerts(product):
             'site': Site.objects.get_current(),
             'hurry': hurry_mode,
         })
-        if alert.user:
-            # Send a site notification
-            num_notifications += 1
-            services.notify_user(alert.user, message_tpl.render(ctx))
 
         # Build email and add to list
         emails.append(
@@ -121,6 +117,4 @@ def send_product_alerts(product):
         connection.open()
         connection.send_messages(emails)
         connection.close()
-
-    logger.info("Sent %d notifications and %d emails", num_notifications,
-                len(emails))
+    logger.info("Sent %d emails", len(emails))
