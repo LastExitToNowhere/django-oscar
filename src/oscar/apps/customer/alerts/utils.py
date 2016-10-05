@@ -54,7 +54,7 @@ def send_product_alerts(product):
     amount of in-stock items is less then the number of notifications.
     """
 
-    if not product.is_active and product.parent.is_active:
+    if not product.is_active and not product.parent.is_active:
         return
 
     stockrecords = product.stockrecords.all()
