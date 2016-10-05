@@ -53,6 +53,10 @@ def send_product_alerts(product):
     if the product is back in stock. Add a little 'hurry' note if the
     amount of in-stock items is less then the number of notifications.
     """
+
+    if not product.is_active and product.parent.is_active:
+        return
+
     stockrecords = product.stockrecords.all()
     num_stockrecords = len(stockrecords)
     if not num_stockrecords:
