@@ -52,7 +52,7 @@ class AbstractWishList(models.Model):
         _('Date created'), auto_now_add=True, editable=False)
 
     def __str__(self):
-        return u"%s's Wish List '%s'" % (self.owner, self.name)
+        return u"%s's %s" % (self.owner.get_full_name(), self.name)
 
     def save(self, *args, **kwargs):
         if not self.pk or kwargs.get('force_insert', False):
