@@ -167,7 +167,9 @@ class PhoneNumberMixin(object):
             return self.instance.country
 
     def get_region_code(self, country):
-        return country.iso_3166_1_a2
+        if country:
+            return country.iso_3166_1_a2
+        return None
 
     def clean_phone_number(self):
         number = self.cleaned_data['phone_number']
