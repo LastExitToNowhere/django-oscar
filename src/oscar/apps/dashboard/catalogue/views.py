@@ -623,11 +623,12 @@ class ProductLookupView(ObjectLookupView):
         return qs.filter(Q(letn_title__icontains=term))
 
     def format_object(self, obj):
+        primary_image = obj.primary_image
         return {
             'id': obj.pk,
             'text': six.text_type(obj),
             'colour': six.text_type(obj.get_colour_list),
-            'primary_image': six.text_type(obj.primary_image.original.name),
+            'primary_image': six.text_type(primary_image.original.name),
         }
 
 
