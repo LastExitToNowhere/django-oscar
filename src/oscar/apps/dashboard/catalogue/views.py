@@ -619,8 +619,7 @@ class ProductLookupView(ObjectLookupView):
         return self.model.browsable.all()
 
     def lookup_filter(self, qs, term):
-        return qs.filter(Q(title__icontains=term)
-                         | Q(parent__title__icontains=term))
+        return qs.filter(Q(letn_title__icontains=term))
 
 
 class ProductClassCreateUpdateView(generic.UpdateView):
