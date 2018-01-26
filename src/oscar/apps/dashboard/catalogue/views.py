@@ -5,7 +5,6 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
-from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 from django.views import generic
 from django_tables2 import SingleTableMixin
@@ -620,16 +619,8 @@ class ProductLookupView(ObjectLookupView):
         return self.model.browsable.all()
 
     def lookup_filter(self, qs, term):
-        return qs.filter(Q(letn_title__icontains=term))
-
-    def format_object(self, obj):
-        primary_image = obj.primary_image()
-        return {
-            'id': obj.pk,
-            'text': six.text_type(obj),
-            'colour': six.text_type(obj.get_colour_list),
-            'primary_image': six.text_type(primary_image.original.name),
-        }
+        return qs.filter(Q(title__icontains=term)
+                         | Q(parent__title__icontains=term))
 
 
 class ProductClassCreateUpdateView(generic.UpdateView):
