@@ -1,4 +1,7 @@
-from django.db import models
+from django.db import models, router
+from django.db.models import F, Value, signals
+from django.db.models.functions import Coalesce
+from django.utils.functional import cached_property
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
@@ -176,20 +179,50 @@ class AbstractStockRecord(models.Model):
         if self.num_allocated is None:
             return self.num_in_stock
         return self.num_in_stock - self.num_allocated
+    
+    @cached_property
+    def can_track_allocations(self):
+        """Return True if the Product is set for stock tracking."""
+        return self.product.get_product_class().track_stock
 
     # 2-stage stock management model
 
     def allocate(self, quantity):
         """
         Record a stock allocation.
-
         This normally happens when a product is bought at checkout.  When the
         product is actually shipped, then we 'consume' the allocation.
         """
+        # Doesn't make sense to allocate if stock tracking is off.
+        if not self.can_track_allocations:
+            return
+        # Send the pre-save signal
+        signals.pre_save.send(
+            sender=self.__class__,
+            instance=self,
+            created=False,
+            raw=False,
+            using=router.db_for_write(self.__class__, instance=self))
+
+        # Atomic update
+        (self.__class__.objects
+            .filter(pk=self.pk)
+            .update(num_allocated=(
+                Coalesce(F('num_allocated'), Value(0)) + quantity)))
+
+        # Make sure the current object is up-to-date
         if self.num_allocated is None:
             self.num_allocated = 0
         self.num_allocated += quantity
-        self.save()
+
+        # Send the post-save signal
+        signals.post_save.send(
+            sender=self.__class__,
+            instance=self,
+            created=False,
+            raw=False,
+            using=router.db_for_write(self.__class__, instance=self))
+
     allocate.alters_data = True
 
     def is_allocation_consumption_possible(self, quantity):
