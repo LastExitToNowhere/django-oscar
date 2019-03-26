@@ -8,8 +8,8 @@ class UserAddressAdmin(admin.ModelAdmin):
 
 
 class CountryAdmin(admin.ModelAdmin):
-    list_display = ('printable_name', 'name', 'iso_3166_1_a2', 'is_shipping_country')
-    search_fields = ('name', 'printable_name', 'iso_3166_1_a2')
+    list_display = ('printable_name', 'name', 'iso_3166_1_a2', 'iso_3166_1_a3', 'is_shipping_country')
+    search_fields = ('name', 'printable_name', 'iso_3166_1_a2', 'iso_3166_1_a3')
     list_filter = ['is_shipping_country']
 
 
