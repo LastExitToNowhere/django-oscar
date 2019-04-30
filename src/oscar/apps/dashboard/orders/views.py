@@ -347,8 +347,7 @@ class OrderListView(BulkEditMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super(OrderListView, self).get_context_data(**kwargs)
         ctx['form'] = self.form
-        order_statuses = Order.all_statuses()
-        ctx['order_statuses'] = order_statuses.sort()
+        ctx['order_statuses'] = sorted(Order.all_statuses())
         ctx['search_filters'] = self.get_search_filter_descriptions()
         return ctx
 
