@@ -313,7 +313,7 @@
                     {% endblock line_actions %}
                 </form>
 
-                <form action="." method="post" id="order_status_form no-widget-init">
+                <form action="." method="post" id="order_status_form" class="no-widget-init">
                     {% csrf_token %}
                     {% block order_actions %}
                         <div class="well">
