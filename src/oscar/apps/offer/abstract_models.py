@@ -585,7 +585,7 @@ class AbstractBenefit(models.Model):
         """
         Determines whether the benefit can be applied to a given basket line
         """
-        return line.stockrecord and line.product.is_discountable
+        return line.stockrecord and line.product.get_is_discountable()
 
     def get_applicable_lines(self, offer, basket, range=None):
         """
