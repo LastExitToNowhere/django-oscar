@@ -336,7 +336,7 @@ class OrderListView(BulkEditMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx['form'] = self.form
         order_statuses = Order.all_statuses()
-        ctx['order_statuses'] = order_statuses.sort()
+        ctx['order_statuses'] = sorted(order_statuses)
         ctx['search_filters'] = self.get_search_filter_descriptions()
         return ctx
 
