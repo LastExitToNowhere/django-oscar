@@ -74,6 +74,7 @@ class OrderSearchForm(forms.Form):
     status_choices = (('', '---------'),) + tuple([(v, v)
                                                    for v
                                                    in Order.all_statuses()])
+    status_choices = sorted(status_choices)
     status = forms.ChoiceField(choices=status_choices, label=_("Status"),
                                required=False)
 
