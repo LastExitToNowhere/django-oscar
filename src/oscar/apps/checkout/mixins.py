@@ -2,6 +2,7 @@ import logging
 
 from django.contrib.sites.models import Site
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.utils import IntegrityError
 from django.http import HttpResponseRedirect
 from django.urls import NoReverseMatch, reverse
 
@@ -181,6 +182,10 @@ class OrderPlacementMixin(CheckoutSessionMixin):
             user_addr.num_orders_as_shipping_address += 1
         if isinstance(addr, BillingAddress):
             user_addr.num_orders_as_billing_address += 1
+        try:
+            user_addr.save()
+        except IntegrityError as e:
+            logger.error(f"Error when saving address {user_addr}: {e}")
         user_addr.save()
 
     def create_billing_address(self, user, billing_address=None,
