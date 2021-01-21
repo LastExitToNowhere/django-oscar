@@ -242,8 +242,8 @@ class BasketView(ModelFormSetView):
 
         flash_messages = ajax.FlashMessages()
         flash_messages.warning(_(
-            "Your basket has got some issues. "
-            "Please correct any validation errors below."))
+            "There are issues with your basket. "
+            "Please refer to the message(s) below."))
 
         if self.request.is_ajax():
             ctx = self.get_context_data(formset=formset,
