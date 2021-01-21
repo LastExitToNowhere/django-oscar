@@ -49,6 +49,14 @@ class AlertsDispatcher:
         if the product is back in stock. Add a little 'hurry' note if the
         amount of in-stock items is less then the number of notifications.
         """
+
+        if not product.is_public:
+            self.dispatcher.logger.info(f"Product is private: {product}" )
+            return
+        if not product.parent.is_public:
+            self.dispatcher.logger.info(f"Product parent is private: {product}")
+            return
+
         stockrecords = product.stockrecords.all()
         num_stockrecords = len(stockrecords)
         if not num_stockrecords:
