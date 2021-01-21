@@ -1,6 +1,7 @@
 import logging
 import warnings
 
+from django.contrib.sites.models import Site
 from django.db.models import Max
 from django.template import loader
 
@@ -82,6 +83,7 @@ class AlertsDispatcher:
 
             extra_context = {
                 'alert': alert,
+                'site': Site.objects.get_current(),
                 'hurry': hurry_mode,
             }
             if alert.user:
