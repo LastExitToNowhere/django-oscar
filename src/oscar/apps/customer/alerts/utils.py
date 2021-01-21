@@ -61,7 +61,7 @@ class AlertsDispatcher:
 
         # Determine 'hurry mode'
         if num_stockrecords == 1:
-            num_in_stock = stockrecords[0].num_in_stock
+            num_in_stock = stockrecords[0].net_stock_level
         else:
             result = stockrecords.aggregate(max_in_stock=Max('num_in_stock'))
             num_in_stock = result['max_in_stock']
