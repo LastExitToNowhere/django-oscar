@@ -1,4 +1,3 @@
-import codecs
 import csv
 
 from django.conf import settings
@@ -88,7 +87,7 @@ class UnicodeCSVWriter:
           ...
     """
     def __init__(self, filename=None, open_file=None, dialect=csv.excel,
-                 encoding="utf-8", **kw):
+                 encoding="utf-8-sig", **kw):
         if filename is open_file is None:
             raise ImproperlyConfigured(
                 "You need to specify either a filename or an open file")
@@ -116,9 +115,9 @@ class UnicodeCSVWriter:
     def add_bom(self, f):
         # If encoding is UTF-8, insert a Byte Order Mark at the start of the
         # file for compatibility with MS Excel.
-        if (self.encoding == 'utf-8'
+        if (self.encoding == 'utf-8-sig'
                 and getattr(settings, 'OSCAR_CSV_INCLUDE_BOM', False)):
-            self.f.write(codecs.BOM_UTF8)
+            self.f.write('\ufeff')
 
     def writerow(self, row):
         if self.writer is None:
