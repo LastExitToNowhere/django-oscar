@@ -1,0 +1,42 @@
+ERROR 2015-07-31 12:04:12,474 base Internal Server Error: /en-gb/dashboard/offers/1/restrictions/
+Traceback (most recent call last):
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/core/handlers/base.py", line 132, in get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/utils/decorators.py", line 145, in inner
+    return func(*args, **kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/views/generic/base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/Users/digicase/Devel/django-oscar/src/oscar/apps/dashboard/offers/views.py", line 93, in dispatch
+    **kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/views/generic/base.py", line 89, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/views/generic/edit.py", line 215, in post
+    return self.form_valid(form)
+  File "/Users/digicase/Devel/django-oscar/src/oscar/apps/dashboard/offers/views.py", line 305, in form_valid
+    return self.save_offer(offer)
+  File "/Users/digicase/Devel/django-oscar/src/oscar/apps/dashboard/offers/views.py", line 223, in save_offer
+    benefit.save()
+AttributeError: 'NoneType' object has no attribute 'save'
+ERROR 2015-07-31 12:05:38,388 base Internal Server Error: /en-gb/dashboard/offers/1/restrictions/
+Traceback (most recent call last):
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/core/handlers/base.py", line 132, in get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/utils/decorators.py", line 145, in inner
+    return func(*args, **kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/views/generic/base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/Users/digicase/Devel/django-oscar/src/oscar/apps/dashboard/offers/views.py", line 93, in dispatch
+    **kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/views/generic/base.py", line 89, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/Users/digicase/.virtualenvs/oscar/lib/python2.7/site-packages/django/views/generic/edit.py", line 215, in post
+    return self.form_valid(form)
+  File "/Users/digicase/Devel/django-oscar/src/oscar/apps/dashboard/offers/views.py", line 305, in form_valid
+    return self.save_offer(offer)
+  File "/Users/digicase/Devel/django-oscar/src/oscar/apps/dashboard/offers/views.py", line 223, in save_offer
+    benefit.save()
+AttributeError: 'NoneType' object has no attribute 'save'

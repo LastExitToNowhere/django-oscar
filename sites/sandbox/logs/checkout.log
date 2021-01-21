@@ -1,0 +1,8 @@
+INFO 2015-07-31 12:08:12,233 views Order #100002: beginning submission process for basket #2
+INFO 2015-07-31 12:08:12,238 views Order #100002: payment successful, placing order
+INFO 2015-07-31 12:08:12,422 mixins Order #100002 - sending ORDER_PLACED messages
+INFO 2015-07-31 12:08:12,427 utils Sending email to arthur@studio-automatique.com
+INFO 2015-08-01 20:34:15,607 views Order #100003: beginning submission process for basket #3
+INFO 2015-08-01 20:34:15,615 views Order #100003: payment successful, placing order
+INFO 2015-08-01 20:34:15,835 mixins Order #100003 - sending ORDER_PLACED messages
+INFO 2015-08-01 20:34:15,839 utils Sending email to arthur@studio-automatique.com
