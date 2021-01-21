@@ -1,8 +1,9 @@
 from datetime import datetime, time
 
 from django.http import HttpResponse
+from django.template.defaultfilters import date
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from oscar.core import utils
 from oscar.core.compat import UnicodeCSVWriter
@@ -29,8 +30,8 @@ class ReportGenerator(object):
     def report_description(self):
         return _('%(report_filter)s between %(start_date)s and %(end_date)s') \
             % {'report_filter': self.description,
-               'start_date': self.start_date,
-               'end_date': self.end_date,
+               'start_date': date(self.start_date, 'DATE_FORMAT'),
+               'end_date': date(self.end_date, 'DATE_FORMAT')
                }
 
     def generate(self):
@@ -93,6 +94,9 @@ class ReportFormatter(object):
         if not d:
             return ''
         return utils.format_datetime(d, 'DATE_FORMAT')
+
+    def format_timedelta(self, td):
+        return utils.format_timedelta(td)
 
     def filename(self):
         return self.filename_template

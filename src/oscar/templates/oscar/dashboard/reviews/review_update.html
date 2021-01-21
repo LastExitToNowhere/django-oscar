@@ -1,4 +1,4 @@
-{% extends 'dashboard/layout.html' %}
+{% extends 'oscar/dashboard/layout.html' %}
 {% load currency_filters %}
 {% load i18n %}
 
@@ -21,11 +21,11 @@
 {% endblock %}
 
 {% block headertext %}
-    {% blocktrans %}Review #{{ review.id }}{% endblocktrans %}
+    {% blocktrans with review_id=review.id %}Review #{{ review_id }}{% endblocktrans %}
 {% endblock %}
 
 {% block dashboard_content %}
-    <form action="." method="post" class="form-stacked" enctype="multipart/form-data">
+    <form method="post" class="form-stacked" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="table-header">
             <h3>{% trans "Review information" %}</h3>

@@ -1,10 +1,13 @@
 import keyword
 
+from django.conf.urls.i18n import is_language_prefix_patterns_used
 from django.core import validators
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import resolve
 from django.http import Http404
-from django.utils.translation import ugettext_lazy as _
+from django.urls import get_urlconf, resolve
+from django.utils.translation import get_language, get_language_from_path
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import override
 
 from oscar.core.loading import get_model
 
@@ -12,26 +15,21 @@ from oscar.core.loading import get_model
 class ExtendedURLValidator(validators.URLValidator):
 
     def __init__(self, *args, **kwargs):
-        # 'verify_exists' has been removed in Django 1.5 and so we no longer
-        # pass it up to the core validator class
         self.is_local_url = False
-        verify_exists = kwargs.pop('verify_exists', False)
-        super(ExtendedURLValidator, self).__init__(*args, **kwargs)
-        self.verify_exists = verify_exists
+        super().__init__(*args, **kwargs)
 
     def __call__(self, value):
         try:
-            super(ExtendedURLValidator, self).__call__(value)
+            super().__call__(value)
         except ValidationError:
-            # The parent validator will raise an exception if the URL does not
-            # exist and so we test here to see if the value is a local URL.
+            # The parent validator will raise an exception if the URL is not a
+            # valid absolute URL so we test here to see if it is a local URL.
             if value:
                 self.validate_local_url(value)
             else:
                 raise
 
-    def validate_local_url(self, value):
-        value = self.clean_url(value)
+    def _validate_url(self, value):
         try:
             resolve(value)
         except Http404:
@@ -49,6 +47,29 @@ class ExtendedURLValidator(validators.URLValidator):
         else:
             self.is_local_url = True
 
+    def validate_local_url(self, value):
+        value = self.clean_url(value)
+        # If we have i18n pattern in the URLconf, by default it will be
+        # resolved against default language by `LocaleRegexURLResolver`. In
+        # this case, it won't resolve the path /de/catalogue/ when default
+        # language code is "en-gb" and so that path validation won't pass,
+        # which is incorrect. In order to work it around, we extract language
+        # code from URL and override current locale within the locale prefix of
+        # the URL.
+        urlconf = get_urlconf()
+        i18n_patterns_used, _ = is_language_prefix_patterns_used(urlconf)
+        redefined_language = None
+        if i18n_patterns_used:
+            language = get_language_from_path(value)
+            current_language = get_language()
+            if language != current_language:
+                redefined_language = language
+        if redefined_language:
+            with override(redefined_language):
+                self._validate_url(value)
+        else:
+            self._validate_url(value)
+
     def clean_url(self, value):
         """
         Ensure url has a preceding slash and no query string
@@ -65,12 +86,12 @@ class URLDoesNotExistValidator(ExtendedURLValidator):
 
     def __call__(self, value):
         """
-        Validate that the URLdoes not already exist.
+        Validate that the URL does not already exist.
 
         The URL will be verified first and raises ``ValidationError`` when
-        it is invalid. A valid URL is checked for existance and raises
-        ``ValidationError`` if the URL already exists. Setting attribute
-        ``verify_exists`` has no impact on validation.
+        it is invalid. A valid URL is checked for existence and raises
+        ``ValidationError`` if the URL already exists.
+
         This validation uses two calls to ExtendedURLValidator which can
         be slow. Be aware of this, when you use it.
 
@@ -99,65 +120,3 @@ def non_python_keyword(value):
             _("This field is invalid as its value is forbidden")
         )
     return value
-
-
-class CommonPasswordValidator(validators.BaseValidator):
-    # See http://www.smartplanet.com/blog/business-brains/top-20-most-common-passwords-of-all-time-revealed-8216123456-8216princess-8216qwerty/4519  # noqa
-    forbidden_passwords = [
-        'password',
-        '1234',
-        '12345'
-        '123456',
-        '123456y',
-        '123456789',
-        'iloveyou',
-        'princess',
-        'monkey',
-        'rockyou',
-        'babygirl',
-        'monkey',
-        'qwerty',
-        '654321',
-        'dragon',
-        'pussy',
-        'baseball',
-        'football',
-        'letmein',
-        'monkey',
-        '696969',
-        'abc123',
-        'qwe123',
-        'qweasd',
-        'mustang',
-        'michael',
-        'shadow',
-        'master',
-        'jennifer',
-        '111111',
-        '2000',
-        'jordan',
-        'superman'
-        'harley'
-    ]
-    message = _("Please choose a less common password")
-    code = 'password'
-
-    def __init__(self, password_file=None):
-        self.limit_value = password_file
-
-    def clean(self, value):
-        return value.strip()
-
-    def compare(self, value, limit):
-        return value in self.forbidden_passwords
-
-    def get_forbidden_passwords(self):
-        if self.limit_value is None:
-            return self.forbidden_passwords
-
-
-# List all requirements for password, site wide
-password_validators = [
-    validators.MinLengthValidator(6),
-    CommonPasswordValidator(),
-]

@@ -2,25 +2,27 @@ import datetime
 
 from django import forms
 from django.http import QueryDict
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 
-from oscar.apps.address.forms import AbstractAddressForm
-from oscar.core.loading import get_model
+from oscar.core.loading import get_class, get_model
+from oscar.forms.mixins import PhoneNumberMixin
 from oscar.forms.widgets import DatePickerInput
-from oscar.views.generic import PhoneNumberMixin
 
 Order = get_model('order', 'Order')
 OrderNote = get_model('order', 'OrderNote')
 ShippingAddress = get_model('order', 'ShippingAddress')
 SourceType = get_model('payment', 'SourceType')
+AbstractAddressForm = get_class('address.forms', 'AbstractAddressForm')
 
 
 class OrderStatsForm(forms.Form):
     date_from = forms.DateField(
-        required=False, label=pgettext_lazy(u"start date", u"From"))
+        required=False, label=pgettext_lazy("start date", "From"),
+        widget=DatePickerInput)
     date_to = forms.DateField(
-        required=False, label=pgettext_lazy(u"end date", u"To"))
+        required=False, label=pgettext_lazy("end date", "To"),
+        widget=DatePickerInput)
 
     _filters = _description = None
 
@@ -106,12 +108,12 @@ class OrderSearchForm(forms.Form):
 
         if data:
             if data.get('response_format', None) not in self.format_choices:
-                # Handle POST/GET dictionaries, which are unmutable.
+                # Handle POST/GET dictionaries, which are immutable.
                 if isinstance(data, QueryDict):
                     data = data.dict()
                 data['response_format'] = 'html'
 
-        super(OrderSearchForm, self).__init__(data, *args, **kwargs)
+        super().__init__(data, *args, **kwargs)
         self.fields['payment_method'].choices = self.payment_method_choices()
 
     def payment_method_choices(self):
@@ -126,7 +128,7 @@ class OrderNoteForm(forms.ModelForm):
         fields = ['message']
 
     def __init__(self, order, user, *args, **kwargs):
-        super(OrderNoteForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.instance.order = order
         self.instance.user = user
 
@@ -147,7 +149,7 @@ class OrderStatusForm(forms.Form):
     new_status = forms.ChoiceField(label=_("New order status"), choices=())
 
     def __init__(self, order, *args, **kwargs):
-        super(OrderStatusForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Set the choices
         choices = [(x, x) for x in order.available_statuses()]

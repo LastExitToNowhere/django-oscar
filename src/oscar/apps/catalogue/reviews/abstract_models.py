@@ -1,18 +1,18 @@
-from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Count, Sum
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 
-from oscar.apps.catalogue.reviews.managers import ApprovedReviewsManager
+from oscar.apps.catalogue.reviews.utils import get_default_review_status
 from oscar.core import validators
 from oscar.core.compat import AUTH_USER_MODEL
+from oscar.core.loading import get_class
+
+ProductReviewQuerySet = get_class('catalogue.reviews.managers', 'ProductReviewQuerySet')
 
 
-@python_2_unicode_compatible
 class AbstractProductReview(models.Model):
     """
     A review of a product
@@ -20,28 +20,31 @@ class AbstractProductReview(models.Model):
     Reviews can belong to a user or be anonymous.
     """
 
-    # Note we keep the review even if the product is deleted
     product = models.ForeignKey(
         'catalogue.Product', related_name='reviews', null=True,
-        on_delete=models.SET_NULL)
+        on_delete=models.CASCADE)
 
     # Scores are between 0 and 5
     SCORE_CHOICES = tuple([(x, x) for x in range(0, 6)])
     score = models.SmallIntegerField(_("Score"), choices=SCORE_CHOICES)
 
     title = models.CharField(
-        verbose_name=pgettext_lazy(u"Product review title", u"Title"),
+        verbose_name=pgettext_lazy("Product review title", "Title"),
         max_length=255, validators=[validators.non_whitespace])
 
     body = models.TextField(_("Body"))
 
     # User information.
     user = models.ForeignKey(
-        AUTH_USER_MODEL, related_name='reviews', null=True, blank=True)
+        AUTH_USER_MODEL,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name='reviews')
 
     # Fields to be completed if user is anonymous
     name = models.CharField(
-        pgettext_lazy(u"Anonymous reviewer name", u"Name"),
+        pgettext_lazy("Anonymous reviewer name", "Name"),
         max_length=255, blank=True)
     email = models.EmailField(_("Email"), blank=True)
     homepage = models.URLField(_("URL"), blank=True)
@@ -52,11 +55,9 @@ class AbstractProductReview(models.Model):
         (APPROVED, _("Approved")),
         (REJECTED, _("Rejected")),
     )
-    default_status = APPROVED
-    if settings.OSCAR_MODERATE_REVIEWS:
-        default_status = FOR_MODERATION
+
     status = models.SmallIntegerField(
-        _("Status"), choices=STATUS_CHOICES, default=default_status)
+        _("Status"), choices=STATUS_CHOICES, default=get_default_review_status)
 
     # Denormalised vote totals
     total_votes = models.IntegerField(
@@ -67,8 +68,7 @@ class AbstractProductReview(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
 
     # Managers
-    objects = models.Manager()
-    approved = ApprovedReviewsManager()
+    objects = ProductReviewQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -103,11 +103,11 @@ class AbstractProductReview(models.Model):
         self.votes.create(user=user, delta=AbstractVote.DOWN)
 
     def save(self, *args, **kwargs):
-        super(AbstractProductReview, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         self.product.update_rating()
 
     def delete(self, *args, **kwargs):
-        super(AbstractProductReview, self).delete(*args, **kwargs)
+        super().delete(*args, **kwargs)
         if self.product is not None:
             self.product.update_rating()
 
@@ -168,17 +168,16 @@ class AbstractProductReview(models.Model):
         Test whether the passed user is allowed to vote on this
         review
         """
-        if not user.is_authenticated():
-            return False, _(u"Only signed in users can vote")
+        if not user.is_authenticated:
+            return False, _("Only signed in users can vote")
         vote = self.votes.model(review=self, user=user, delta=1)
         try:
             vote.full_clean()
         except ValidationError as e:
-            return False, u"%s" % e
+            return False, "%s" % e
         return True, ""
 
 
-@python_2_unicode_compatible
 class AbstractVote(models.Model):
     """
     Records user ratings as yes/no vote.
@@ -186,8 +185,14 @@ class AbstractVote(models.Model):
     * Only signed-in users can vote.
     * Each user can vote only once.
     """
-    review = models.ForeignKey('reviews.ProductReview', related_name='votes')
-    user = models.ForeignKey(AUTH_USER_MODEL, related_name='review_votes')
+    review = models.ForeignKey(
+        'reviews.ProductReview',
+        on_delete=models.CASCADE,
+        related_name='votes')
+    user = models.ForeignKey(
+        AUTH_USER_MODEL,
+        related_name='review_votes',
+        on_delete=models.CASCADE)
     UP, DOWN = 1, -1
     VOTE_CHOICES = (
         (UP, _("Up")),
@@ -205,7 +210,7 @@ class AbstractVote(models.Model):
         verbose_name_plural = _('Votes')
 
     def __str__(self):
-        return u"%s vote for %s" % (self.delta, self.review)
+        return "%s vote for %s" % (self.delta, self.review)
 
     def clean(self):
         if not self.review.is_anonymous and self.review.user == self.user:
@@ -220,5 +225,5 @@ class AbstractVote(models.Model):
                 "You can only vote once on a review"))
 
     def save(self, *args, **kwargs):
-        super(AbstractVote, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         self.review.update_totals()

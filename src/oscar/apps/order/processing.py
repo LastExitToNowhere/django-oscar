@@ -1,12 +1,8 @@
 from decimal import Decimal as D
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from oscar.apps.order import exceptions
-from oscar.core.loading import get_model
-
-ShippingEventQuantity = get_model('order', 'ShippingEventQuantity')
-PaymentEventQuantity = get_model('order', 'PaymentEventQuantity')
 
 
 class EventHandler(object):
@@ -113,7 +109,7 @@ class EventHandler(object):
         specified shipping event.
 
         This is useful for validating if certain shipping events are allowed
-        (ie you can't return something before it has shipped).
+        (i.e. you can't return something before it has shipped).
         """
         for line, line_qty in zip(lines, line_quantities):
             if line.shipping_event_quantity(event_type) < line_qty:
@@ -180,27 +176,49 @@ class EventHandler(object):
         """
         Check whether stock records still have enough stock to honour the
         requested allocations.
+
+        Lines whose product doesn't track stock are disregarded, which means
+        this method will return True if only non-stock-tracking-lines are
+        passed.
+        This means you can just throw all order lines to this method, without
+        checking whether stock tracking is enabled or not.
+        This is okay, as calling consume_stock_allocations() has no effect for
+        non-stock-tracking lines.
         """
         for line, qty in zip(lines, line_quantities):
             record = line.stockrecord
             if not record:
                 return False
+            if not record.can_track_allocations:
+                continue
             if not record.is_allocation_consumption_possible(qty):
                 return False
         return True
 
-    def consume_stock_allocations(self, order, lines, line_quantities):
+    def consume_stock_allocations(self, order, lines=None, line_quantities=None):
         """
-        Consume the stock allocations for the passed lines
+        Consume the stock allocations for the passed lines.
+
+        If no lines/quantities are passed, do it for all lines.
         """
+        if not lines:
+            lines = order.lines.all()
+        if not line_quantities:
+            line_quantities = [line.quantity for line in lines]
         for line, qty in zip(lines, line_quantities):
             if line.stockrecord:
                 line.stockrecord.consume_allocation(qty)
 
-    def cancel_stock_allocations(self, order, lines, line_quantities):
+    def cancel_stock_allocations(self, order, lines=None, line_quantities=None):
         """
-        Cancel the stock allocations for the passed lines
+        Cancel the stock allocations for the passed lines.
+
+        If no lines/quantities are passed, do it for all lines.
         """
+        if not lines:
+            lines = order.lines.all()
+        if not line_quantities:
+            line_quantities = [line.quantity for line in lines]
         for line, qty in zip(lines, line_quantities):
             if line.stockrecord:
                 line.stockrecord.cancel_allocation(qty)

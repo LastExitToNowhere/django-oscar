@@ -77,13 +77,14 @@ class OfferApplications(object):
         voucher_discounts = {}
         for application in self.voucher_discounts:
             voucher = application['voucher']
+            discount = application['discount']
             if voucher.code not in voucher_discounts:
                 voucher_discounts[voucher.code] = {
                     'voucher': voucher,
-                    'discount': application['discount'],
+                    'discount': discount,
                 }
             else:
-                voucher_discounts[voucher.code] += application.discount
+                voucher_discounts[voucher.code]['discount'] += discount
         return voucher_discounts.values()
 
     @property
@@ -144,6 +145,9 @@ class BasketDiscount(ApplicationResult):
 
     @property
     def is_successful(self):
+        """
+        Returns ``True`` if the discount is greater than zero
+        """
         return self.discount > 0
 
     def __str__(self):
@@ -171,7 +175,7 @@ SHIPPING_DISCOUNT = ShippingDiscount()
 class PostOrderAction(ApplicationResult):
     """
     For when an offer condition is met but the benefit is deferred until after
-    the order has been placed.  Eg buy 2 books and get 100 loyalty points.
+    the order has been placed. E.g. buy 2 books and get 100 loyalty points.
     """
     is_final = is_successful = True
     affects = ApplicationResult.POST_ORDER

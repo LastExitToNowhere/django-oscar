@@ -1,3 +1,7 @@
+.. spelling::
+
+    Transifex
+
 =========================
 Oscar 0.6.1 release notes
 =========================
@@ -8,7 +12,7 @@ few minor bugs.
 Possible data loss from deleted users
 -------------------------------------
 
-Before this release, the foreign key from the 
+Before this release, the foreign key from the
 :class:`~oscar.apps.order.abstract_models.Order` model to the ``User`` model
 did not specify an ``on_delete`` behaviour.  The default is for deletes to
 cascade to related objects, even if the field is nullable.  Hence, deleting a
@@ -63,10 +67,10 @@ The following bugs were fixed:
 * `#1133`_ - The order detail page for anonymous checkouts failed to render if
   reviews were disabled.
 
-* `#1134`_ - Fixed a bug caused where unicode characters in child products'
+* `#1134`_ - Fixed a bug caused where Unicode characters in child products'
   titles were incorrectly handled.
 
-* `#1138`_ - Adjust the 
+* `#1138`_ - Adjust the
   :class:`~oscar.apps.shipping.models.OrderAndItemCharges` shipping method to
   not count lines that don't require shipping.
 
@@ -85,4 +89,3 @@ The following bugs were fixed:
 .. _`#1146`: https://github.com/django-oscar/django-oscar/issues/1146
 .. _`#1149`: https://github.com/django-oscar/django-oscar/issues/1149
 .. _`Django's docs`: https://docs.djangoproject.com/en/dev/ref/models/fields/#django.db.models.ForeignKey.on_delete
-

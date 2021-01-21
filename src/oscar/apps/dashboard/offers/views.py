@@ -1,13 +1,14 @@
-from django.utils import timezone
 import json
 
+from django.conf import settings
 from django.contrib import messages
 from django.core import serializers
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.utils.translation import ugettext_lazy as _
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from django.views.generic import DeleteView, FormView, ListView
 
 from oscar.core.loading import get_class, get_classes, get_model
@@ -30,8 +31,9 @@ OrderDiscountCSVFormatter = get_class(
 class OfferListView(ListView):
     model = ConditionalOffer
     context_object_name = 'offers'
-    template_name = 'dashboard/offers/offer_list.html'
+    template_name = 'oscar/dashboard/offers/offer_list.html'
     form_class = OfferSearchForm
+    paginate_by = settings.OSCAR_DASHBOARD_ITEMS_PER_PAGE
 
     def get_queryset(self):
         qs = self.model._default_manager.exclude(
@@ -63,7 +65,7 @@ class OfferListView(ListView):
         return qs
 
     def get_context_data(self, **kwargs):
-        ctx = super(OfferListView, self).get_context_data(**kwargs)
+        ctx = super().get_context_data(**kwargs)
         ctx['queryset_description'] = self.description
         ctx['form'] = self.form
         ctx['is_filtered'] = self.is_filtered
@@ -89,8 +91,7 @@ class OfferWizardStepView(FormView):
                 request, _("%s step not complete") % (
                     self.previous_view.step_name.title(),))
             return HttpResponseRedirect(self.get_back_url())
-        return super(OfferWizardStepView, self).dispatch(request, *args,
-                                                         **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def is_previous_step_complete(self, request):
         if not self.previous_view:
@@ -112,8 +113,7 @@ class OfferWizardStepView(FormView):
         form_data = form.cleaned_data.copy()
         range = form_data.get('range', None)
         if range is not None:
-            form_data['range_id'] = range.id
-            del form_data['range']
+            form_data['range'] = range.id
         form_kwargs = {'data': form_data}
         json_data = json.dumps(form_kwargs, cls=DjangoJSONEncoder)
 
@@ -126,12 +126,7 @@ class OfferWizardStepView(FormView):
         session_data = self.request.session.setdefault(self.wizard_name, {})
         json_data = session_data.get(self._key(step_name), None)
         if json_data:
-            form_kwargs = json.loads(json_data)
-            if 'range_id' in form_kwargs['data']:
-                form_kwargs['data']['range'] = Range.objects.get(
-                    id=form_kwargs['data']['range_id'])
-                del form_kwargs['data']['range_id']
-            return form_kwargs
+            return json.loads(json_data)
 
         return {}
 
@@ -177,13 +172,13 @@ class OfferWizardStepView(FormView):
             form_kwargs['instance'] = self.get_instance()
         session_kwargs = self._fetch_form_kwargs()
         form_kwargs.update(session_kwargs)
-        parent_kwargs = super(OfferWizardStepView, self).get_form_kwargs(
+        parent_kwargs = super().get_form_kwargs(
             *args, **kwargs)
         form_kwargs.update(parent_kwargs)
         return form_kwargs
 
     def get_context_data(self, **kwargs):
-        ctx = super(OfferWizardStepView, self).get_context_data(**kwargs)
+        ctx = super().get_context_data(**kwargs)
         if self.update:
             ctx['offer'] = self.offer
         ctx['session_offer'] = self._fetch_session_offer()
@@ -210,7 +205,7 @@ class OfferWizardStepView(FormView):
             return self.save_offer(self.offer)
         else:
             # Proceed to next page
-            return super(OfferWizardStepView, self).form_valid(form)
+            return super().form_valid(form)
 
     def save_offer(self, offer):
         # We update the offer with the name/description from step 1
@@ -260,7 +255,7 @@ class OfferWizardStepView(FormView):
 class OfferMetaDataView(OfferWizardStepView):
     step_name = 'metadata'
     form_class = MetaDataForm
-    template_name = 'dashboard/offers/metadata_form.html'
+    template_name = 'oscar/dashboard/offers/metadata_form.html'
     url_name = 'dashboard:offer-metadata'
     success_url_name = 'dashboard:offer-benefit'
 
@@ -274,7 +269,7 @@ class OfferMetaDataView(OfferWizardStepView):
 class OfferBenefitView(OfferWizardStepView):
     step_name = 'benefit'
     form_class = BenefitForm
-    template_name = 'dashboard/offers/benefit_form.html'
+    template_name = 'oscar/dashboard/offers/benefit_form.html'
     url_name = 'dashboard:offer-benefit'
     success_url_name = 'dashboard:offer-condition'
     previous_view = OfferMetaDataView
@@ -290,7 +285,7 @@ class OfferBenefitView(OfferWizardStepView):
 class OfferConditionView(OfferWizardStepView):
     step_name = 'condition'
     form_class = ConditionForm
-    template_name = 'dashboard/offers/condition_form.html'
+    template_name = 'oscar/dashboard/offers/condition_form.html'
     url_name = 'dashboard:offer-condition'
     success_url_name = 'dashboard:offer-restrictions'
     previous_view = OfferBenefitView
@@ -302,7 +297,7 @@ class OfferConditionView(OfferWizardStepView):
 class OfferRestrictionsView(OfferWizardStepView):
     step_name = 'restrictions'
     form_class = RestrictionsForm
-    template_name = 'dashboard/offers/restrictions_form.html'
+    template_name = 'oscar/dashboard/offers/restrictions_form.html'
     previous_view = OfferConditionView
     url_name = 'dashboard:offer-restrictions'
 
@@ -319,7 +314,7 @@ class OfferRestrictionsView(OfferWizardStepView):
 
 class OfferDeleteView(DeleteView):
     model = ConditionalOffer
-    template_name = 'dashboard/offers/offer_delete.html'
+    template_name = 'oscar/dashboard/offers/offer_delete.html'
     context_object_name = 'offer'
 
     def get_success_url(self):
@@ -331,12 +326,13 @@ class OfferDetailView(ListView):
     # Slightly odd, but we treat the offer detail view as a list view so the
     # order discounts can be browsed.
     model = OrderDiscount
-    template_name = 'dashboard/offers/offer_detail.html'
+    template_name = 'oscar/dashboard/offers/offer_detail.html'
     context_object_name = 'order_discounts'
+    paginate_by = settings.OSCAR_DASHBOARD_ITEMS_PER_PAGE
 
     def dispatch(self, request, *args, **kwargs):
         self.offer = get_object_or_404(ConditionalOffer, pk=kwargs['pk'])
-        return super(OfferDetailView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         if 'suspend' in request.POST:
@@ -370,7 +366,7 @@ class OfferDetailView(ListView):
             .select_related('order')
 
     def get_context_data(self, **kwargs):
-        ctx = super(OfferDetailView, self).get_context_data(**kwargs)
+        ctx = super().get_context_data(**kwargs)
         ctx['offer'] = self.offer
         return ctx
 
@@ -379,4 +375,4 @@ class OfferDetailView(ListView):
             formatter = OrderDiscountCSVFormatter()
             return formatter.generate_response(context['order_discounts'],
                                                offer=self.offer)
-        return super(OfferDetailView, self).render_to_response(context)
+        return super().render_to_response(context)

@@ -1,17 +1,12 @@
-import hashlib
-import random
-
-from django.core.urlresolvers import reverse
 from django.db import models
-from django.utils import six
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from django.urls import reverse
+from django.utils.crypto import get_random_string
+from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 
 from oscar.core.compat import AUTH_USER_MODEL
 
 
-@python_2_unicode_compatible
 class AbstractWishList(models.Model):
     """
     Represents a user's wish lists of products.
@@ -20,8 +15,11 @@ class AbstractWishList(models.Model):
     """
 
     # Only authenticated users can have wishlists
-    owner = models.ForeignKey(AUTH_USER_MODEL, related_name='wishlists',
-                              verbose_name=_('Owner'))
+    owner = models.ForeignKey(
+        AUTH_USER_MODEL,
+        related_name='wishlists',
+        on_delete=models.CASCADE,
+        verbose_name=_('Owner'))
     name = models.CharField(verbose_name=_('Name'), default=_('Default'),
                             max_length=255)
 
@@ -49,24 +47,24 @@ class AbstractWishList(models.Model):
     # That is a rare enough case to handle it by convention instead of a
     # BooleanField.
     date_created = models.DateTimeField(
-        _('Date created'), auto_now_add=True, editable=False)
+        _('Date created'), auto_now_add=True, editable=False, db_index=True)
 
     def __str__(self):
-        return u"%s's Wish List '%s'" % (self.owner, self.name)
+        return "%s's Wish List '%s'" % (self.owner, self.name)
 
     def save(self, *args, **kwargs):
         if not self.pk or kwargs.get('force_insert', False):
             self.key = self.__class__.random_key()
-        super(AbstractWishList, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     @classmethod
     def random_key(cls, length=6):
         """
-        Get a unique random generated key based on SHA-1 and owner
+        Get a unique random generated key
         """
         while True:
-            rand = six.text_type(random.random()).encode('utf8')
-            key = hashlib.sha1(rand).hexdigest()[:length]
+            key = get_random_string(length=length,
+                                    allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789')
             if not cls._default_manager.filter(key=key).exists():
                 return key
 
@@ -104,13 +102,15 @@ class AbstractWishList(models.Model):
             line.save()
 
 
-@python_2_unicode_compatible
 class AbstractLine(models.Model):
     """
     One entry in a wish list. Similar to order lines or basket lines.
     """
-    wishlist = models.ForeignKey('wishlists.WishList', related_name='lines',
-                                 verbose_name=_('Wish List'))
+    wishlist = models.ForeignKey(
+        'wishlists.WishList',
+        on_delete=models.CASCADE,
+        related_name='lines',
+        verbose_name=_('Wish List'))
     product = models.ForeignKey(
         'catalogue.Product', verbose_name=_('Product'),
         related_name='wishlists_lines', on_delete=models.SET_NULL,
@@ -118,11 +118,10 @@ class AbstractLine(models.Model):
     quantity = models.PositiveIntegerField(_('Quantity'), default=1)
     #: Store the title in case product gets deleted
     title = models.CharField(
-        pgettext_lazy(u"Product title", u"Title"), max_length=255)
+        pgettext_lazy("Product title", "Title"), max_length=255)
 
     def __str__(self):
-        return u'%sx %s on %s' % (self.quantity, self.title,
-                                  self.wishlist.name)
+        return '%sx %s on %s' % (self.quantity, self.title, self.wishlist.name)
 
     def get_title(self):
         if self.product:

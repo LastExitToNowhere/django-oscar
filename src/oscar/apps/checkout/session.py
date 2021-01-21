@@ -3,8 +3,8 @@ from decimal import Decimal as D
 from django import http
 from django.contrib import messages
 from django.core.exceptions import ImproperlyConfigured
-from django.core.urlresolvers import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 
 from oscar.core import prices
 from oscar.core.loading import get_class, get_model
@@ -12,6 +12,7 @@ from oscar.core.loading import get_class, get_model
 from . import exceptions
 
 Repository = get_class('shipping.repository', 'Repository')
+SurchargeApplicator = get_class("checkout.applicator", "SurchargeApplicator")
 OrderTotalCalculator = get_class(
     'checkout.calculators', 'OrderTotalCalculator')
 CheckoutSessionData = get_class(
@@ -66,7 +67,7 @@ class CheckoutSessionMixin(object):
         except exceptions.PassedSkipCondition as e:
             return http.HttpResponseRedirect(e.url)
 
-        return super(CheckoutSessionMixin, self).dispatch(
+        return super().dispatch(
             request, *args, **kwargs)
 
     def check_pre_conditions(self, request):
@@ -141,7 +142,7 @@ class CheckoutSessionMixin(object):
             )
 
     def check_user_email_is_captured(self, request):
-        if not request.user.is_authenticated() \
+        if not request.user.is_authenticated \
                 and not self.checkout_session.get_guest_email():
             raise exceptions.FailedPreCondition(
                 url=reverse('checkout:index'),
@@ -228,6 +229,7 @@ class CheckoutSessionMixin(object):
         shipping_address = self.get_shipping_address(request.basket)
         shipping_method = self.get_shipping_method(
             request.basket, shipping_address)
+        surcharges = SurchargeApplicator(request).get_applicable_surcharges(basket=request.basket)
         if shipping_method:
             shipping_charge = shipping_method.calculate(request.basket)
         else:
@@ -238,7 +240,7 @@ class CheckoutSessionMixin(object):
                 currency=request.basket.currency, excl_tax=D('0.00'),
                 tax=D('0.00')
             )
-        total = self.get_order_totals(request.basket, shipping_charge)
+        total = self.get_order_totals(request.basket, shipping_charge, surcharges)
         if total.excl_tax == D('0.00'):
             raise exceptions.PassedSkipCondition(
                 url=reverse('checkout:preview')
@@ -249,7 +251,7 @@ class CheckoutSessionMixin(object):
     def get_context_data(self, **kwargs):
         # Use the proposed submission as template context data.  Flatten the
         # order kwargs so they are easily available too.
-        ctx = super(CheckoutSessionMixin, self).get_context_data()
+        ctx = super().get_context_data()
         ctx.update(self.build_submission(**kwargs))
         ctx.update(kwargs)
         ctx.update(ctx['order_kwargs'])
@@ -263,27 +265,34 @@ class CheckoutSessionMixin(object):
         This can be the right place to perform tax lookups and apply them to
         the basket.
         """
-        basket = kwargs.get('basket', self.request.basket)
+        # Pop the basket if there is one, because we pass it as a positional
+        # argument to methods below
+        basket = kwargs.pop('basket', self.request.basket)
         shipping_address = self.get_shipping_address(basket)
         shipping_method = self.get_shipping_method(
             basket, shipping_address)
         billing_address = self.get_billing_address(shipping_address)
-        if not shipping_method:
-            total = shipping_charge = None
-        else:
-            shipping_charge = shipping_method.calculate(basket)
-            total = self.get_order_totals(
-                basket, shipping_charge=shipping_charge)
         submission = {
             'user': self.request.user,
             'basket': basket,
             'shipping_address': shipping_address,
             'shipping_method': shipping_method,
-            'shipping_charge': shipping_charge,
             'billing_address': billing_address,
-            'order_total': total,
             'order_kwargs': {},
-            'payment_kwargs': {}}
+            'payment_kwargs': {}
+        }
+
+        surcharges = SurchargeApplicator(self.request, submission).get_applicable_surcharges(self.request.basket)
+        if not shipping_method:
+            total = shipping_charge = None
+        else:
+            shipping_charge = shipping_method.calculate(basket)
+            total = self.get_order_totals(
+                basket, shipping_charge=shipping_charge, surcharges=surcharges, **kwargs)
+
+        submission["shipping_charge"] = shipping_charge
+        submission["order_total"] = total
+        submission['surcharges'] = surcharges
 
         # If there is a billing address, add it to the payment kwargs as calls
         # to payment gateways generally require the billing address. Note, that
@@ -298,8 +307,9 @@ class CheckoutSessionMixin(object):
 
         # Set guest email after overrides as we need to update the order_kwargs
         # entry.
-        if (not submission['user'].is_authenticated() and
-                'guest_email' not in submission['order_kwargs']):
+        user = submission['user']
+        if (not user.is_authenticated
+                and 'guest_email' not in submission['order_kwargs']):
             email = self.checkout_session.get_guest_email()
             submission['order_kwargs']['guest_email'] = email
         return submission
@@ -405,9 +415,9 @@ class CheckoutSessionMixin(object):
                 user_address.populate_alternative_model(billing_address)
                 return billing_address
 
-    def get_order_totals(self, basket, shipping_charge, **kwargs):
+    def get_order_totals(self, basket, shipping_charge, surcharges=None, **kwargs):
         """
         Returns the total for the order with and without tax
         """
         return OrderTotalCalculator(self.request).calculate(
-            basket, shipping_charge, **kwargs)
+            basket, shipping_charge, surcharges, **kwargs)

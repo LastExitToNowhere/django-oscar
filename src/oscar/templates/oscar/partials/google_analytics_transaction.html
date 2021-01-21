@@ -1,25 +1,24 @@
-{% extends "partials/google_analytics.html" %}
+{% extends "oscar/partials/google_analytics.html" %}
+{% load l10n %}
 
 {% block extratracking %}
-    _gaq.push(['_addTrans',
-    '{{ order.number|escapejs }}',
-    '{{ shop_name|escapejs }}',
-    '{{ order.total_incl_tax|escapejs }}',
-    '{{ order.total_tax|escapejs }}',
-    '{{ order.shipping_incl_tax|escapejs }}',
-    '{{ order.shipping_address.line4|escapejs }}',
-    '{{ order.shipping_address.state|escapejs }}',
-    '{{ order.shipping_address.country.name|escapejs }}'
-    ]);
-    {% for line in order.lines.all %}
-        _gaq.push(['_addItem',
-        '{{ order.number }}',
-        '{{ line.partner_sku|escapejs }}',
-        '{{ line.title|escapejs }}',
-        '{{ line.category|default:"Uncategorised"|escapejs }}',
-        '{{ line.unit_price_incl_tax }}',
-        '{{ line.quantity }}']);
-    {% endfor %}
-    _gaq.push(['_set', 'currencyCode', '{{ order.currency|escapejs }}']);
-    _gaq.push(['_trackTrans']);
+    gtag('event', 'purchase', {
+      "transaction_id": '{{ order.number|escapejs }}',
+      "affiliation": '{{ shop_name|escapejs }}',
+      "value": '{{ order.total_incl_tax|unlocalize|escapejs }}',
+      "currency": '{{ order.currency|escapejs }}',
+      "tax": '{{ order.total_tax|unlocalize|escapejs }}',
+      "shipping": '{{ order.shipping_incl_tax|unlocalize|escapejs }}',
+      items: [
+          {% for line in order.lines.all %}
+          {
+            'id': '{{ line.partner_sku|escapejs }}',
+            'name': '{{ line.title|escapejs }}',
+            'category': '{{ line.category|default:"Uncategorised"|escapejs }}',
+            'price': '{{ line.unit_price_incl_tax|unlocalize|escapejs }}',
+            'quantity': '{{ line.quantity|escapejs }}'
+         }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+      ]
+    });
 {% endblock %}

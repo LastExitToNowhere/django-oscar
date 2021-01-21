@@ -1,3 +1,6 @@
+from phonenumber_field.phonenumber import PhoneNumber
+
+
 class CheckoutSessionData(object):
     """
     Responsible for marshalling all the checkout session data
@@ -165,7 +168,13 @@ class CheckoutSessionData(object):
         """
         Store address fields for a billing address.
         """
-        self._flush_namespace('billing')
+        self._unset('billing', 'new_address_fields')
+        phone_number = address_fields.get('phone_number')
+        if phone_number and isinstance(phone_number, PhoneNumber):
+            # Phone number is stored as a PhoneNumber instance. As we store
+            # strings in the session, we need to serialize it.
+            address_fields = address_fields.copy()
+            address_fields['phone_number'] = phone_number.as_international
         self._set('billing', 'new_address_fields', address_fields)
 
     def bill_to_user_address(self, address):

@@ -1,4 +1,4 @@
-{% extends "customer/baseaccountpage.html" %}
+{% extends "oscar/customer/baseaccountpage.html" %}
 {% load i18n %}
 
 {% block breadcrumbs %}
@@ -20,7 +20,7 @@
 {% endblock %}
 
 {% block tabcontent %}
-    <form action="." method="post">
+    <form method="post">
         {% csrf_token %}
         <p>
             {% blocktrans with name=wishlist.name %}

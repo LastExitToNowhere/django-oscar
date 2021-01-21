@@ -1,25 +1,24 @@
 # coding=utf-8
-from decimal import Decimal as D
-import random
 import datetime
+import random
+from decimal import Decimal as D
 
 from django.conf import settings
 from django.utils import timezone
 
-from oscar.apps.offer import models
-from oscar.apps.partner import strategy, availability, prices
 from oscar.core.loading import get_class, get_model
 from oscar.test.factories.address import *  # noqa
 from oscar.test.factories.basket import *  # noqa
 from oscar.test.factories.catalogue import *  # noqa
 from oscar.test.factories.contrib import *  # noqa
 from oscar.test.factories.customer import *  # noqa
+from oscar.test.factories.models import *  # noqa
 from oscar.test.factories.offer import *  # noqa
 from oscar.test.factories.order import *  # noqa
 from oscar.test.factories.partner import *  # noqa
 from oscar.test.factories.payment import *  # noqa
 from oscar.test.factories.voucher import *  # noqa
-
+from oscar.test.factories.wishlists import *  # noqa
 
 Basket = get_model('basket', 'Basket')
 Free = get_class('shipping.methods', 'Free')
@@ -27,18 +26,27 @@ Voucher = get_model('voucher', 'Voucher')
 OrderCreator = get_class('order.utils', 'OrderCreator')
 OrderTotalCalculator = get_class('checkout.calculators',
                                  'OrderTotalCalculator')
+SurchargeApplicator = get_class('checkout.applicator', 'SurchargeApplicator')
 Partner = get_model('partner', 'Partner')
 StockRecord = get_model('partner', 'StockRecord')
+PurchaseInfo = get_class('partner.strategy', 'PurchaseInfo')
+Default = get_class('partner.strategy', 'Default')
+StockRequired = get_class('partner.availability', 'StockRequired')
+FixedPrice = get_class('partner.prices', 'FixedPrice')
 
 Product = get_model('catalogue', 'Product')
 ProductClass = get_model('catalogue', 'ProductClass')
 ProductAttribute = get_model('catalogue', 'ProductAttribute')
 ProductAttributeValue = get_model('catalogue', 'ProductAttributeValue')
 ProductImage = get_model('catalogue', 'ProductImage')
-ConditionalOffer = get_model('offer', 'ConditionalOffer')
 
 WeightBand = get_model('shipping', 'WeightBand')
 WeightBased = get_model('shipping', 'WeightBased')
+
+Range = get_model('offer', 'Range')
+Condition = get_model('offer', 'Condition')
+Benefit = get_model('offer', 'Benefit')
+ConditionalOffer = get_model('offer', 'ConditionalOffer')
 
 
 def create_stockrecord(product=None, price_excl_tax=None, partner_sku=None,
@@ -62,20 +70,20 @@ def create_stockrecord(product=None, price_excl_tax=None, partner_sku=None,
 
 
 def create_purchase_info(record):
-    return strategy.PurchaseInfo(
-        price=prices.FixedPrice(
+    return PurchaseInfo(
+        price=FixedPrice(
             record.price_currency,
             record.price_excl_tax,
             D('0.00')  # Default to no tax
         ),
-        availability=availability.StockRequired(
+        availability=StockRequired(
             record.net_stock_level),
         stockrecord=record
     )
 
 
-def create_product(upc=None, title=u"Dùｍϻϒ title",
-                   product_class=u"Dùｍϻϒ item class",
+def create_product(upc=None, title="Dùｍϻϒ title",
+                   product_class="Dùｍϻϒ item class",
                    partner_name=None, partner_sku=None, price=None,
                    num_in_stock=None, attributes=None,
                    partner_users=None, **kwargs):
@@ -131,7 +139,7 @@ def create_product_image(product=None,
 
 def create_basket(empty=False):
     basket = Basket.objects.create()
-    basket.strategy = strategy.Default()
+    basket.strategy = Default()
     if not empty:
         product = create_product()
         create_stockrecord(product, num_in_stock=2)
@@ -147,7 +155,7 @@ def create_order(number=None, basket=None, user=None, shipping_address=None,
     """
     if not basket:
         basket = Basket.objects.create()
-        basket.strategy = strategy.Default()
+        basket.strategy = Default()
         product = create_product()
         create_stockrecord(
             product, num_in_stock=10, price_excl_tax=D('10.00'))
@@ -157,8 +165,10 @@ def create_order(number=None, basket=None, user=None, shipping_address=None,
     if shipping_method is None:
         shipping_method = Free()
     shipping_charge = shipping_method.calculate(basket)
+    surcharges = SurchargeApplicator().get_applicable_surcharges(basket)
     if total is None:
-        total = OrderTotalCalculator().calculate(basket, shipping_charge)
+        total = OrderTotalCalculator().calculate(basket, shipping_charge, surcharges)
+    kwargs['surcharges'] = surcharges
     order = OrderCreator().place_order(
         order_number=number,
         user=user,
@@ -173,21 +183,21 @@ def create_order(number=None, basket=None, user=None, shipping_address=None,
     return order
 
 
-def create_offer(name=u"Dùｍϻϒ offer", offer_type="Site",
+def create_offer(name="Dùｍϻϒ offer", offer_type="Site",
                  max_basket_applications=None, range=None, condition=None,
                  benefit=None, priority=0, status=None, start=None, end=None):
     """
     Helper method for creating an offer
     """
     if range is None:
-        range, __ = models.Range.objects.get_or_create(
-            name=u"All products räñgë", includes_all_products=True)
+        range, __ = Range.objects.get_or_create(
+            name="All products räñgë", includes_all_products=True)
     if condition is None:
-        condition, __ = models.Condition.objects.get_or_create(
-            range=range, type=models.Condition.COUNT, value=1)
+        condition, __ = Condition.objects.get_or_create(
+            range=range, type=Condition.COUNT, value=1)
     if benefit is None:
-        benefit, __ = models.Benefit.objects.get_or_create(
-            range=range, type=models.Benefit.PERCENTAGE, value=20)
+        benefit, __ = Benefit.objects.get_or_create(
+            range=range, type=Benefit.PERCENTAGE, value=20)
     if status is None:
         status = ConditionalOffer.OPEN
 
@@ -210,15 +220,18 @@ def create_offer(name=u"Dùｍϻϒ offer", offer_type="Site",
         priority=priority)
 
 
-def create_voucher():
+def create_voucher(**kwargs):
     """
     Helper method for creating a voucher
     """
-    voucher = Voucher.objects.create(
-        name=u"Dùｍϻϒ voucher",
-        code="test",
-        start_datetime=timezone.now(),
-        end_datetime=timezone.now() + datetime.timedelta(days=12))
+    defaults = {
+        'name': "Dùｍϻϒ voucher",
+        'code': "test",
+        'start_datetime': timezone.now(),
+        'end_datetime': timezone.now() + datetime.timedelta(days=12)
+    }
+    defaults.update(kwargs)
+    voucher = VoucherFactory(**defaults)
     voucher.offers.add(create_offer(offer_type='Voucher'))
     return voucher
 

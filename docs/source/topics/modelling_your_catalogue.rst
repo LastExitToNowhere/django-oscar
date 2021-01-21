@@ -35,6 +35,9 @@ to customise the underlying Django models. There's different types of
 attributes, e.g. ones for just associating text (type ``text`` or ``richtext``),
 for related images and files (type ``image`` and ``file``), etc.
 
+Storing data in structured attributes also makes it easy to search and filter
+products based on specific attributes.
+
 The available product attributes for a product are set when creating the
 product's class. The sandbox comes with a product class for T-shirts, and
 they have a ``size`` attribute::
@@ -44,8 +47,8 @@ they have a ``size`` attribute::
     <AttributeOption: Large>
 
 You can assign ``option`` s to your product. For example you want a Language attribute
-to your product, and a couple of options to choose from, for example English and 
-Croatian. You'd first create an ``AttributeOptionGroup`` that would contain all the 
+to your product, and a couple of options to choose from, for example English and
+Croatian. You'd first create an ``AttributeOptionGroup`` that would contain all the
 ``AttributeOption`` s you want to have available::
 
     > language = AttributeOptionGroup.objects.create(name='Language')
@@ -86,13 +89,33 @@ type::
     > p.attr.admin_user
     <User: superuser>
 
+You can also use the ``multi_option`` attribute type if your options are not
+mutually exclusive::
+
+    > klass = ProductClass.objects.create(name='foo', slug='bar')
+    > ProductAttribute.objects.create(
+    >     product_class=klass,
+    >     name='Size',
+    >     code='size',
+    >     type='multi_option',
+    >     option_group=language
+    > )
+
+This will let you assign multiple values (``size`` in the example above) to the
+attribute.
+
+You can also query for attributes using a special method on the manager::
+
+    > first_large_shirt = Product.objects.filter_by_attributes(size="Large").first()
+    > first_large_shirt.attr.size
+    <AttributeOption: Large>
 
 All attribute types apart from ``entity`` can be edited in the product
 dashboard. The latter is too dependent on your use case and you will need to
 decide yourself how you want to set and display it.
 
-Parent and child products
--------------------------
+Variants (Parent and child products)
+------------------------------------
 
 Often there's an overarching product, which groups other products. In that
 case, you can create a parent product, and then set the ``parent`` field on the
@@ -100,6 +123,17 @@ child products. By default, only parent products (or products without children)
 get their own URL.
 Child products inherit their product class from the parent, and only child
 products can have stock records (read: pricing information) on them.
+
+Product attributes vs. variants
+-------------------------------
+
+When to use variants, and when to use attributes?
+
+- Variants are tied to stock records, and hence, pricing.
+  Use variants if your product variations have different pricing or availability.
+
+- Use attributes when you are storing structured data for a product (i.e. colour, size)
+  that you can use for search/filtering/display purposes.
 
 Going further
 -------------

@@ -8,7 +8,7 @@ This is a work-in-progress list of commonly used terms when discussing Oscar.
     :sorted:
 
     Partner
-    Fulfillment partner
+    Fulfilment partner
        An individual or company who can fulfil products. E.g. for physical
        goods, somebody with a warehouse and means of delivery.
 
@@ -38,9 +38,9 @@ This is a work-in-progress list of commonly used terms when discussing Oscar.
        Prize winners".  Each product will belong to different categories within
        the site so ranges allow them to be grouped together.
 
-       Ranges can then be used in offers (eg 10% off all booker prize winners).
+       Ranges can then be used in offers (e.g. 10% off all Booker prize winners).
        At some point, ranges will be expanded to have their own detail pages
-       within Oscar too.​
+       within Oscar too.
 
 
     Product Class
@@ -76,4 +76,9 @@ This is a work-in-progress list of commonly used terms when discussing Oscar.
 
         Options are values that can be associated with a item when it is added
         to a customer's basket.  This could be something like a personalised
-        message to be printed on a T-shirt.
+        message to be printed on a T-shirt, or a colour choice.
+
+        Product Options are different from Product Attributes in that they are
+        used to specify a specific purchase choice by the customer, whereas
+        Attributes exist to store and display the features of a product in
+        a structured way.

@@ -1,7 +1,20 @@
-{% extends "customer/baseaccountpage.html" %}
-{% load i18n %}
+{% extends "oscar/customer/baseaccountpage.html" %}
 {% load currency_filters %}
-{% load staticfiles %}
+{% load i18n %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static "oscar/js/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" %}" />
+    <link rel="stylesheet" type="text/css" href="{% static "oscar/css/datetimepicker.css" %}" />
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static "oscar/js/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js" %}"></script>
+    <script src="{% static "oscar/js/bootstrap-datetimepicker/locales/bootstrap-datetimepicker.all.js" %}"></script>
+{% endblock %}
+
 
 {% block breadcrumbs %}
     <ul class="breadcrumb">
@@ -20,8 +33,8 @@
     {% if orders or form.is_bound %}
         <div class="well">
             <h2>{% trans "Filter" %}</h2>
-            <form action="." method="get" class="form-horizontal">
-                {% include "partials/form_fields.html" with form=form style='horizontal' %}
+            <form method="get" class="form-horizontal">
+                {% include "oscar/partials/form_fields.html" with form=form style='horizontal' %}
                 <div class="form-group">
                     <div class="col-sm-offset-4 col-sm-8">
                         <button type="submit" class="btn btn-primary" data-loading-text="{% trans 'Filtering...' %}">{% trans 'Filter results' %}</button>
@@ -50,7 +63,7 @@
                 </tr>
             {% endfor %}
         </table>
-        {% include "partials/pagination.html" %}
+        {% include "oscar/partials/pagination.html" %}
     {% else %}
         {% if form.is_bound %}
             <p>{% trans "No orders match your search." %}</p>

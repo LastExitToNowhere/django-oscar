@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal as D
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from oscar.core.loading import get_class, get_model
 
@@ -30,7 +30,7 @@ class OfferReportCSVFormatter(ReportCSVFormatter):
 
 
 class OfferReportHTMLFormatter(ReportHTMLFormatter):
-    filename_template = 'dashboard/reports/partials/offer_report.html'
+    filename_template = 'oscar/dashboard/reports/partials/offer_report.html'
 
 
 class OfferReportGenerator(ReportGenerator):
@@ -64,4 +64,4 @@ class OfferReportGenerator(ReportGenerator):
             offer_discounts[discount.offer_id]['total_discount'] \
                 += discount.amount
 
-        return self.formatter.generate_response(offer_discounts.values())
+        return self.formatter.generate_response(list(offer_discounts.values()))

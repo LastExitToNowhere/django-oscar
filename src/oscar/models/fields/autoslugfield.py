@@ -26,15 +26,12 @@ THE SOFTWARE.
 
 import re
 
-from django.db.models import SlugField
-from django.utils import six
+from django.conf import settings
+from django.utils.encoding import force_str
 
 from oscar.core.utils import slugify
 
-try:
-    from django.utils.encoding import force_unicode  # NOQA
-except ImportError:
-    from django.utils.encoding import force_text as force_unicode  # NOQA
+from .slugfield import SlugField
 
 
 class AutoSlugField(SlugField):
@@ -67,11 +64,18 @@ class AutoSlugField(SlugField):
             raise ValueError("missing 'populate_from' argument")
         else:
             self._populate_from = populate_from
-        self.separator = kwargs.pop('separator', six.u('-'))
+            self._populate_from_org = populate_from
+        self.separator = kwargs.pop('separator', '-')
         self.overwrite = kwargs.pop('overwrite', False)
         self.uppercase = kwargs.pop('uppercase', False)
         self.allow_duplicates = kwargs.pop('allow_duplicates', False)
-        super(AutoSlugField, self).__init__(*args, **kwargs)
+
+        # not override parameter if it was passed explicitly,
+        # so passed parameters takes precedence over the setting
+        if settings.OSCAR_SLUG_ALLOW_UNICODE:
+            kwargs.setdefault('allow_unicode', settings.OSCAR_SLUG_ALLOW_UNICODE)
+
+        super().__init__(*args, **kwargs)
 
     def _slug_strip(self, value):
         """
@@ -86,9 +90,10 @@ class AutoSlugField(SlugField):
         return re.sub(r'^%s+|%s+$' % (re_sep, re_sep), '', value)
 
     def get_queryset(self, model_cls, slug_field):
-        for field, model in model_cls._meta.get_fields_with_model():
-            if model and field == slug_field:
-                return model._default_manager.all()
+        # https://github.com/django-extensions/django-extensions/pull/854/files
+        for field in model_cls._meta._get_fields():
+            if field == slug_field:
+                return field.model._default_manager.all()
         return model_cls._default_manager.all()
 
     def slugify_func(self, content):
@@ -160,7 +165,7 @@ class AutoSlugField(SlugField):
         return slug
 
     def pre_save(self, model_instance, add):
-        value = force_unicode(self.create_slug(model_instance, add))
+        value = force_str(self.create_slug(model_instance, add))
         setattr(model_instance, self.attname, value)
         return value
 
@@ -168,9 +173,9 @@ class AutoSlugField(SlugField):
         return "SlugField"
 
     def deconstruct(self):
-        name, path, args, kwargs = super(AutoSlugField, self).deconstruct()
-        kwargs['populate_from'] = self._populate_from
-        if not self.separator == six.u('-'):
+        name, path, args, kwargs = super().deconstruct()
+        kwargs['populate_from'] = self._populate_from_org
+        if not self.separator == '-':
             kwargs['separator'] = self.separator
         if self.overwrite is not False:
             kwargs['overwrite'] = True

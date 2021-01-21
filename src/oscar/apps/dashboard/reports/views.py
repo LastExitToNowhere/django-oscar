@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.http import Http404, HttpResponseForbidden
 from django.template.response import TemplateResponse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.views.generic import ListView
 
 from oscar.core.loading import get_class
@@ -12,7 +12,7 @@ GeneratorRepository = get_class('dashboard.reports.utils',
 
 
 class IndexView(ListView):
-    template_name = 'dashboard/reports/index.html'
+    template_name = 'oscar/dashboard/reports/index.html'
     paginate_by = settings.OSCAR_DASHBOARD_ITEMS_PER_PAGE
     context_object_name = 'objects'
     report_form_class = ReportForm

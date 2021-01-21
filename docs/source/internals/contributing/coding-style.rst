@@ -9,11 +9,18 @@ Please follow these conventions while remaining sensible:
 
 * `PEP8 -- Style Guide for Python Code <http://www.python.org/dev/peps/pep-0008/>`_
 * `PEP257 -- Docstring Conventions <http://www.python.org/dev/peps/pep-0257/>`_
-* `Django Coding Style <http://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/>`_
+* `Django Coding Style <http://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/>`_
 
 `Code Like a Pythonista`_ is recommended reading.
 
+flake8_ and isort_ are used to enforce basic coding standards. To run these
+checks, use:
+
+    $ make lint
+
 .. _Code Like a Pythonista: http://python.net/~goodger/projects/pycon/2007/idiomatic/handout.html
+.. _flake8: http://flake8.pycqa.org/en/latest/
+.. _isort: http://timothycrosley.github.io/isort/
 
 URLs
 ----
@@ -22,14 +29,14 @@ URLs
 
 * Detail pages should simply be a PK/slug on top of the list page; e.g.
   ``/products/the-bible/``, ``/notifications/1/``
-  
+
 * Create pages should have 'create' as the final path segment; e.g.
   ``/dashboard/notifications/create/``
 
 * URL names use dashes not underscores.
 
 * Update pages are sometimes the same as detail pages (i.e., when in the
-  dashboard).  In those cases, just use the detail convention, eg
+  dashboard).  In those cases, just use the detail convention, e.g.
   ``/dashboard/notifications/3/``.  If there is a distinction between the detail
   page and the update page, use ``/dashboard/notifications/3/update/``.
 

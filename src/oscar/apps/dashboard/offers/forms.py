@@ -1,8 +1,7 @@
 import datetime
 
 from django import forms
-from django.utils import six
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from oscar.core.loading import get_model
 from oscar.forms import widgets
@@ -28,7 +27,7 @@ class RestrictionsForm(forms.ModelForm):
         label=_("End date"), required=False)
 
     def __init__(self, *args, **kwargs):
-        super(RestrictionsForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         today = datetime.date.today()
         self.fields['start_datetime'].initial = today
 
@@ -36,10 +35,11 @@ class RestrictionsForm(forms.ModelForm):
         model = ConditionalOffer
         fields = ('start_datetime', 'end_datetime',
                   'max_basket_applications', 'max_user_applications',
-                  'max_global_applications', 'max_discount')
+                  'max_global_applications', 'max_discount',
+                  'priority', 'exclusive')
 
     def clean(self):
-        cleaned_data = super(RestrictionsForm, self).clean()
+        cleaned_data = super().clean()
         start = cleaned_data['start_datetime']
         end = cleaned_data['end_datetime']
         if start and end and end < start:
@@ -54,13 +54,13 @@ class ConditionForm(forms.ModelForm):
         label=_("Custom condition"), choices=())
 
     def __init__(self, *args, **kwargs):
-        super(ConditionForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         custom_conditions = Condition.objects.all().exclude(
             proxy_class=None)
         if len(custom_conditions) > 0:
             # Initialise custom_condition field
-            choices = [(c.id, six.text_type(c)) for c in custom_conditions]
+            choices = [(c.id, str(c)) for c in custom_conditions]
             choices.insert(0, ('', ' --------- '))
             self.fields['custom_condition'].choices = choices
             condition = kwargs.get('instance')
@@ -77,19 +77,18 @@ class ConditionForm(forms.ModelForm):
         fields = ['range', 'type', 'value']
 
     def clean(self):
-        data = super(ConditionForm, self).clean()
+        data = super().clean()
 
         # Check that either a condition has been entered or a custom condition
         # has been chosen
-        if not any(data.values()):
-            raise forms.ValidationError(
-                _("Please either choose a range, type and value OR "
-                  "select a custom condition"))
-
-        if not data['custom_condition']:
+        if data.get('custom_condition'):
             if not data.get('range', None):
                 raise forms.ValidationError(
                     _("A range is required"))
+        elif not all([data.get('range'), data.get('type'), data.get('value')]):
+            raise forms.ValidationError(
+                _("Please either choose a range, type and value OR "
+                  "select a custom condition"))
 
         return data
 
@@ -99,7 +98,7 @@ class ConditionForm(forms.ModelForm):
         if self.cleaned_data['custom_condition']:
             return Condition.objects.get(
                 id=self.cleaned_data['custom_condition'])
-        return super(ConditionForm, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class BenefitForm(forms.ModelForm):
@@ -108,13 +107,13 @@ class BenefitForm(forms.ModelForm):
         label=_("Custom incentive"), choices=())
 
     def __init__(self, *args, **kwargs):
-        super(BenefitForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         custom_benefits = Benefit.objects.all().exclude(
             proxy_class=None)
         if len(custom_benefits) > 0:
             # Initialise custom_benefit field
-            choices = [(c.id, six.text_type(c)) for c in custom_benefits]
+            choices = [(c.id, str(c)) for c in custom_benefits]
             choices.insert(0, ('', ' --------- '))
             self.fields['custom_benefit'].choices = choices
             benefit = kwargs.get('instance')
@@ -130,7 +129,7 @@ class BenefitForm(forms.ModelForm):
         fields = ['range', 'type', 'value', 'max_affected_items']
 
     def clean(self):
-        data = super(BenefitForm, self).clean()
+        data = super().clean()
 
         # Check that either a benefit has been entered or a custom benfit
         # has been chosen
@@ -144,6 +143,10 @@ class BenefitForm(forms.ModelForm):
                 raise forms.ValidationError(
                     _("No other options can be set if you are using a "
                       "custom incentive"))
+        elif not data.get('type'):
+            raise forms.ValidationError(
+                _("Please either choose a range, type and value OR "
+                  "select a custom incentive"))
 
         return data
 
@@ -153,7 +156,7 @@ class BenefitForm(forms.ModelForm):
         if self.cleaned_data['custom_benefit']:
             return Benefit.objects.get(
                 id=self.cleaned_data['custom_benefit'])
-        return super(BenefitForm, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class OfferSearchForm(forms.Form):

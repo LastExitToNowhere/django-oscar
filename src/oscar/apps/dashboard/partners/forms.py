@@ -1,27 +1,27 @@
 from django import forms
 from django.contrib.auth.models import Permission
-from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.password_validation import validate_password
+from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 
-from oscar.apps.customer.forms import EmailUserCreationForm
 from oscar.core.compat import existing_user_fields, get_user_model
-from oscar.core.loading import get_model
-from oscar.core.validators import password_validators
+from oscar.core.loading import get_class, get_model
 
 User = get_user_model()
 Partner = get_model('partner', 'Partner')
 PartnerAddress = get_model('partner', 'PartnerAddress')
+EmailUserCreationForm = get_class('customer.forms', 'EmailUserCreationForm')
 
 
 class PartnerSearchForm(forms.Form):
     name = forms.CharField(
-        required=False, label=pgettext_lazy(u"Partner's name", u"Name"))
+        required=False, label=pgettext_lazy("Partner's name", "Name"))
 
 
 class PartnerCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
-        super(PartnerCreateForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # Partner.name is optional and that is okay. But if creating through
         # the dashboard, it seems sensible to enforce as it's the only field
         # in the form.
@@ -30,6 +30,7 @@ class PartnerCreateForm(forms.ModelForm):
     class Meta:
         model = Partner
         fields = ('name',)
+
 
 ROLE_CHOICES = (
     ('staff', _('Full dashboard access')),
@@ -43,11 +44,11 @@ class NewUserForm(EmailUserCreationForm):
 
     def __init__(self, partner, *args, **kwargs):
         self.partner = partner
-        super(NewUserForm, self).__init__(host=None, *args, **kwargs)
+        super().__init__(host=None, *args, **kwargs)
 
     def save(self):
         role = self.cleaned_data.get('role', 'limited')
-        user = super(NewUserForm, self).save(commit=False)
+        user = super().save(commit=False)
         user.is_staff = role == 'staff'
         user.save()
         self.partner.users.add(user)
@@ -75,8 +76,7 @@ class ExistingUserForm(forms.ModelForm):
     password1 = forms.CharField(
         label=_('Password'),
         widget=forms.PasswordInput,
-        required=False,
-        validators=password_validators)
+        required=False)
     password2 = forms.CharField(
         required=False,
         label=_('Confirm Password'),
@@ -89,17 +89,18 @@ class ExistingUserForm(forms.ModelForm):
         if password1 != password2:
             raise forms.ValidationError(
                 _("The two password fields didn't match."))
+        validate_password(password2, self.instance)
         return password2
 
     def __init__(self, *args, **kwargs):
         user = kwargs['instance']
         role = 'staff' if user.is_staff else 'limited'
         kwargs.get('initial', {}).setdefault('role', role)
-        super(ExistingUserForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def save(self):
         role = self.cleaned_data.get('role', 'none')
-        user = super(ExistingUserForm, self).save(commit=False)
+        user = super().save(commit=False)
         user.is_staff = role == 'staff'
         if self.cleaned_data['password1']:
             user.set_password(self.cleaned_data['password1'])
@@ -130,7 +131,7 @@ class UserEmailForm(forms.Form):
 class PartnerAddressForm(forms.ModelForm):
     name = forms.CharField(
         required=False, max_length=128,
-        label=pgettext_lazy(u"Partner's name", u"Name"))
+        label=pgettext_lazy("Partner's name", "Name"))
 
     class Meta:
         fields = ('name', 'line1', 'line2', 'line3', 'line4',

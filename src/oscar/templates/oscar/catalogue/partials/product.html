@@ -1,17 +1,17 @@
-{% load reviews_tags %}
-{% load thumbnail %}
-{% load i18n %}
 {% load display_tags %}
-{% load staticfiles %}
+{% load i18n %}
+{% load image_tags %}
+{% load reviews_tags %}
 
 {% block product %}
     <article class="product_pod">
         {% block product_image %}
             <div class="image_container">
                 {% with image=product.primary_image %}
-                    {% thumbnail image.original "x155" upscale=False as thumb %}
-                    <a href="{{ product.get_absolute_url }}"><img src="{{ thumb.url }}" alt="{{ product.get_title }}" class="thumbnail"></a>
-                    {% endthumbnail %}
+                    {% oscar_thumbnail image.original "x155" upscale=False as thumb %}
+                    <a href="{{ product.get_absolute_url }}">
+                        <img src="{{ thumb.url }}" alt="{{ product.get_title }}" class="thumbnail">
+                    </a>
                 {% endwith %}
             </div>
         {% endblock %}
@@ -34,9 +34,9 @@
 
         {% block product_price %}
             <div class="product_price">
-                {% include "catalogue/partials/stock_record.html" %}
-                {% if not product.is_parent %}
-                    {% include "catalogue/partials/add_to_basket_form_compact.html" %}
+                {% include "oscar/catalogue/partials/stock_record.html" %}
+                {% if not product.is_parent and not product.has_options %}
+                    {% include "oscar/catalogue/partials/add_to_basket_form_compact.html" %}
                 {% endif %}
             </div>
         {% endblock %}

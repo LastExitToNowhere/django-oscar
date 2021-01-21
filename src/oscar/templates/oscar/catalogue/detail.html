@@ -1,16 +1,15 @@
-{% extends "layout.html" %}
+{% extends "oscar/layout.html" %}
 
 {% load history_tags %}
 {% load currency_filters %}
 {% load reviews_tags %}
-{% load staticfiles %}
 {% load product_tags %}
 {% load display_tags %}
 {% load i18n %}
 {% load purchase_info_tags %}
 
 {% block title %}
-    {{ product.title }} | {{ block.super }}
+    {{ product.get_title }} | {{ block.super }}
 {% endblock %}
 
 {% block description %}
@@ -22,13 +21,13 @@
     <li>
         <a href="{{ homepage_url }}">{% trans "Home" %}</a>
     </li>
-    {% with category=product.categories.all.0 %}
+    {% with category=product.get_categories.first %}
         {% for c in category.get_ancestors_and_self %}
         <li>
             <a href="{{ c.get_absolute_url }}">{{ c.name }}</a>
         </li>
         {% endfor %}
-        <li class="active">{{ product.title }}</li>
+        <li class="active">{{ product.get_title }}</li>
 
         {% get_back_button as backbutton %}
         {% if backbutton %}
@@ -53,34 +52,46 @@
 
         {% block product_gallery %}
         <div class="col-sm-6">
-            {% include "catalogue/partials/gallery.html" %}
+            {% include "oscar/catalogue/partials/gallery.html" %}
         </div>
         {% endblock %}
 
         {% block product_main %}
         <div class="col-sm-6 product_main">
             {% comment %}
-            This is a but clunky here.  Better to have some kind of JS-driven dashboard menu that 
+            This is a but clunky here.  Better to have some kind of JS-driven dashboard menu that
             pops out when clicked.  A bit like the Django-Debug-Toolbar button
             {% endcomment %}
-            {% if user.is_authenticated and user.is_staff %}
+            {% if user.is_staff %}
                 <a class="pull-right hidden-xs" href="{% url 'dashboard:catalogue-product' pk=product.id %}"><small><i class="icon-edit"></i> {% trans "Edit this product" %}</small></a>
             {% endif %}
             <h1>{{ product.get_title }}</h1>
 
             {% block product_stock_record %}
-                {% include "catalogue/partials/stock_record.html" with verbose=1 %}
+                {% include "oscar/catalogue/partials/stock_record.html" with verbose=1 %}
             {% endblock %}
 
             {% iffeature "reviews" %}
-                {% include "catalogue/reviews/partials/review_stars.html" %}
+                {% include "oscar/catalogue/reviews/partials/review_stars.html" %}
             {% endiffeature %}
 
             <hr/>
 
-            {% block product_basket_form %}
-                {% include "catalogue/partials/add_to_basket_form.html" %}
-            {% endblock %}
+            {% if not product.is_parent %}
+                {% block product_basket_form %}
+                    {% include "oscar/catalogue/partials/add_to_basket_form.html" %}
+                {% endblock %}
+            {% else %}
+                {% block variants %}
+                    <h2>{% trans 'Variants:' %}</h2>
+                    {% for child in product.children.public %}
+                        {% purchase_info_for_product request child as child_session %}
+                        {% if child_session.availability.is_available_to_buy %}
+                            <a href="{{ child.get_absolute_url }}">{{ child.get_title }}</a><br>
+                        {% endif %}
+                    {% endfor %}
+                {% endblock %}
+            {% endif %}
         </div><!-- /col-sm-6 -->
         {% endblock %}
 
@@ -167,7 +178,7 @@
                 <ol class="list-unstyled review-list">
                     {% for review in product.reviews.approved.all|slice:":3" %}
                         <li>
-                        {% include 'catalogue/partials/review.html' %}
+                        {% include 'oscar/catalogue/partials/review.html' %}
                         </li>
                     {% endfor %}
                 </ol>
@@ -176,7 +187,7 @@
         {% endblock product_review %}
     {% endiffeature %}
 
-    {% with recommended_products=product.recommended_products.all|slice:":6" %}
+    {% with recommended_products=product.sorted_recommended_products|slice:":6" %}
         {% if recommended_products %}
             <div class="sub-header">
                 <h2>{% trans "Recommended items" %}</h2>

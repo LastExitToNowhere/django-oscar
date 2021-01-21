@@ -1,5 +1,3 @@
-import warnings
-
 from django.contrib.auth.backends import ModelBackend
 from django.core.exceptions import ImproperlyConfigured
 
@@ -22,7 +20,7 @@ class EmailBackend(ModelBackend):
     For this to work, the User model must have an 'email' field
     """
 
-    def authenticate(self, email=None, password=None, *args, **kwargs):
+    def _authenticate(self, request, email=None, password=None, *args, **kwargs):
         if email is None:
             if 'username' not in kwargs or kwargs['username'] is None:
                 return None
@@ -42,7 +40,7 @@ class EmailBackend(ModelBackend):
         # We make a case-insensitive match when looking for emails.
         matching_users = User.objects.filter(email__iexact=clean_email)
         authenticated_users = [
-            user for user in matching_users if user.check_password(password)]
+            user for user in matching_users if (user.check_password(password) and self.user_can_authenticate(user))]
         if len(authenticated_users) == 1:
             # Happy path
             return authenticated_users[0]
@@ -55,14 +53,5 @@ class EmailBackend(ModelBackend):
                 "password")
         return None
 
-
-# Deprecated since Oscar 1.0 because of the spelling.
-class Emailbackend(EmailBackend):
-
-    def __init__(self):
-        warnings.warn(
-            "Oscar's auth backend EmailBackend has been renamed in Oscar 1.0 "
-            " and you're using the old name of Emailbackend. Please rename "
-            " all references; most likely in the AUTH_BACKENDS setting.",
-            DeprecationWarning)
-        super(Emailbackend, self).__init__()
+    def authenticate(self, *args, **kwargs):
+        return self._authenticate(*args, **kwargs)

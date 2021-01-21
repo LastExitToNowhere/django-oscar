@@ -1,11 +1,14 @@
-import re
+import logging
+from functools import lru_cache
 
+from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
-from django.core.urlresolvers import NoReverseMatch, resolve, reverse
-from django.http import Http404
+from django.urls import resolve, reverse
 
-from oscar.core.loading import AppNotFoundError, get_class
+from oscar.core.application import OscarDashboardConfig
 from oscar.views.decorators import check_permissions
+
+logger = logging.getLogger('oscar.dashboard')
 
 
 class Node(object):
@@ -56,52 +59,49 @@ class Node(object):
         return len(self.children) > 0
 
 
+@lru_cache(maxsize=1)
+def _dashboard_url_names_to_config():
+    dashboard_configs = (
+        config
+        for config in apps.get_app_configs()
+        if isinstance(config, OscarDashboardConfig)
+    )
+    urls_to_config = {}
+    for config in dashboard_configs:
+        for url in config.urls[0]:
+            # includes() don't have a name attribute
+            # We skipped them because they come from other AppConfigs
+            name = getattr(url, 'name', None)
+            if not name:
+                continue
+
+            if name in urls_to_config:
+                if urls_to_config[name] != config:
+                    raise ImproperlyConfigured(
+                        "'{}' exists in both {} and {}!".format(
+                            name, config, urls_to_config[name]
+                        )
+                    )
+
+            urls_to_config[name] = config
+    return urls_to_config
+
+
 def default_access_fn(user, url_name, url_args=None, url_kwargs=None):
     """
-    Given a url_name and a user, this function tries to assess whether the
+    Given a user and a url_name, this function assesses whether the
     user has the right to access the URL.
-    The application instance of the view is fetched via dynamic imports,
-    and those assumptions will only hold true if the standard Oscar layout
-    is followed.
     Once the permissions for the view are known, the access logic used
     by the dashboard decorator is evaluated
-
-    This function might seem costly, but a simple comparison with DTT
-    did not show any change in response time
     """
-    exception = ImproperlyConfigured(
-        "Please follow Oscar's default dashboard app layout or set a "
-        "custom access_fn")
     if url_name is None:  # it's a heading
         return True
-    # get view module string
-    try:
-        url = reverse(url_name, args=url_args, kwargs=url_kwargs)
-        view_module = resolve(url).func.__module__
-    except (NoReverseMatch, Http404):
-        # if there's no match, no need to display it
-        return False
 
-    # We can't assume that the view has the same parent module as the app,
-    # as either the app or view can be customised. So we turn the module
-    # string (e.g. 'oscar.apps.dashboard.catalogue.views') into an app
-    # label that can be loaded by get_class (e.g.
-    # 'dashboard.catalogue.app), which then essentially checks
-    # INSTALLED_APPS for the right module to load
-    match = re.search('(dashboard[\w\.]*)\.views$', view_module)
-    if not match:
-        raise exception
-    app_label_str = match.groups()[0] + '.app'
+    url = reverse(url_name, args=url_args, kwargs=url_kwargs)
+    url_match = resolve(url)
+    url_name = url_match.url_name
+    app_config_instance = _dashboard_url_names_to_config()[url_name]
 
-    try:
-        app_instance = get_class(app_label_str, 'application')
-    except AppNotFoundError:
-        raise exception
+    permissions = app_config_instance.get_permissions(url_name)
 
-    # handle name-spaced view names
-    if ':' in url_name:
-        view_name = url_name.split(':')[1]
-    else:
-        view_name = url_name
-    permissions = app_instance.get_permissions(view_name)
     return check_permissions(user, permissions)

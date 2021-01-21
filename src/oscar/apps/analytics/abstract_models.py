@@ -1,13 +1,11 @@
 from decimal import Decimal
 
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from oscar.core.compat import AUTH_USER_MODEL
 
 
-@python_2_unicode_compatible
 class AbstractProductRecord(models.Model):
     """
     A record of a how popular a product is.
@@ -18,7 +16,7 @@ class AbstractProductRecord(models.Model):
 
     product = models.OneToOneField(
         'catalogue.Product', verbose_name=_("Product"),
-        related_name='stats')
+        related_name='stats', on_delete=models.CASCADE)
 
     # Data used for generating a score
     num_views = models.PositiveIntegerField(_('Views'), default=0)
@@ -46,7 +44,8 @@ class AbstractUserRecord(models.Model):
     A record of a user's activity.
     """
 
-    user = models.OneToOneField(AUTH_USER_MODEL, verbose_name=_("User"))
+    user = models.OneToOneField(AUTH_USER_MODEL, verbose_name=_("User"),
+                                on_delete=models.CASCADE)
 
     # Browsing stats
     num_product_views = models.PositiveIntegerField(
@@ -73,11 +72,15 @@ class AbstractUserRecord(models.Model):
         verbose_name_plural = _('User records')
 
 
-@python_2_unicode_compatible
 class AbstractUserProductView(models.Model):
 
-    user = models.ForeignKey(AUTH_USER_MODEL, verbose_name=_("User"))
-    product = models.ForeignKey('catalogue.Product', verbose_name=_("Product"))
+    user = models.ForeignKey(
+        AUTH_USER_MODEL, verbose_name=_("User"),
+        on_delete=models.CASCADE)
+    product = models.ForeignKey(
+        'catalogue.Product',
+        on_delete=models.CASCADE,
+        verbose_name=_("Product"))
     date_created = models.DateTimeField(_("Date Created"), auto_now_add=True)
 
     class Meta:
@@ -91,10 +94,12 @@ class AbstractUserProductView(models.Model):
             'user': self.user, 'product': self.product}
 
 
-@python_2_unicode_compatible
 class AbstractUserSearch(models.Model):
 
-    user = models.ForeignKey(AUTH_USER_MODEL, verbose_name=_("User"))
+    user = models.ForeignKey(
+        AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        verbose_name=_("User"))
     query = models.CharField(_("Search term"), max_length=255, db_index=True)
     date_created = models.DateTimeField(_("Date Created"), auto_now_add=True)
 

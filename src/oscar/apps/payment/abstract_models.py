@@ -1,8 +1,7 @@
 from decimal import Decimal
 
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from oscar.core.compat import AUTH_USER_MODEL
 from oscar.core.utils import get_default_currency
@@ -12,7 +11,6 @@ from oscar.templatetags.currency_filters import currency
 from . import bankcards
 
 
-@python_2_unicode_compatible
 class AbstractTransaction(models.Model):
     """
     A transaction for a particular payment source.
@@ -23,11 +21,13 @@ class AbstractTransaction(models.Model):
     events do.
 
     For example:
-    * A 'pre-auth' with a bankcard gateway
-    * A 'settle' with a credit provider (see django-oscar-accounts)
+    * A ``pre-auth`` with a bankcard gateway
+    * A ``settle`` with a credit provider (see :py:mod:`django-oscar-accounts`)
     """
     source = models.ForeignKey(
-        'payment.Source', related_name='transactions',
+        'payment.Source',
+        on_delete=models.CASCADE,
+        related_name='transactions',
         verbose_name=_("Source"))
 
     # We define some sample types but don't constrain txn_type to be one of
@@ -39,10 +39,10 @@ class AbstractTransaction(models.Model):
     amount = models.DecimalField(_("Amount"), decimal_places=2, max_digits=12)
     reference = models.CharField(_("Reference"), max_length=128, blank=True)
     status = models.CharField(_("Status"), max_length=128, blank=True)
-    date_created = models.DateTimeField(_("Date Created"), auto_now_add=True)
+    date_created = models.DateTimeField(_("Date Created"), auto_now_add=True, db_index=True)
 
     def __str__(self):
-        return _(u"%(type)s of %(amount).2f") % {
+        return _("%(type)s of %(amount).2f") % {
             'type': self.txn_type,
             'amount': self.amount}
 
@@ -54,24 +54,28 @@ class AbstractTransaction(models.Model):
         verbose_name_plural = _("Transactions")
 
 
-@python_2_unicode_compatible
 class AbstractSource(models.Model):
     """
     A source of payment for an order.
 
-    This is normally a credit card which has been pre-authed for the order
+    This is normally a credit card which has been pre-authorised for the order
     amount, but some applications will allow orders to be paid for using
-    multiple sources such as cheque, credit accounts, gift cards.  Each payment
+    multiple sources such as cheque, credit accounts, gift cards. Each payment
     source will have its own entry.
 
     This source object tracks how much money has been authorised, debited and
     refunded, which is useful when payment takes place in multiple stages.
     """
     order = models.ForeignKey(
-        'order.Order', related_name='sources', verbose_name=_("Order"))
+        'order.Order',
+        on_delete=models.CASCADE,
+        related_name='sources',
+        verbose_name=_("Order"))
     source_type = models.ForeignKey(
-        'payment.SourceType', verbose_name=_("Source Type"),
-        related_name="sources")
+        'payment.SourceType',
+        on_delete=models.CASCADE,
+        related_name="sources",
+        verbose_name=_("Source Type"))
     currency = models.CharField(
         _("Currency"), max_length=12, default=get_default_currency)
 
@@ -88,7 +92,7 @@ class AbstractSource(models.Model):
 
     # Reference number for this payment source.  This is often used to look up
     # a transaction model for a particular payment partner.
-    reference = models.CharField(_("Reference"), max_length=128, blank=True)
+    reference = models.CharField(_("Reference"), max_length=255, blank=True)
 
     # A customer-friendly label for the source, eg XXXX-XXXX-XXXX-1234
     label = models.CharField(_("Label"), max_length=128, blank=True)
@@ -116,7 +120,7 @@ class AbstractSource(models.Model):
         return description
 
     def save(self, *args, **kwargs):
-        super(AbstractSource, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         if self.deferred_txns:
             for txn in self.deferred_txns:
                 self._create_transaction(*txn)
@@ -183,8 +187,8 @@ class AbstractSource(models.Model):
         """
         Return the balance of this source
         """
-        return (self.amount_allocated - self.amount_debited +
-                self.amount_refunded)
+        return (self.amount_allocated - self.amount_debited
+                + self.amount_refunded)
 
     @property
     def amount_available_for_refund(self):
@@ -194,7 +198,6 @@ class AbstractSource(models.Model):
         return self.amount_debited - self.amount_refunded
 
 
-@python_2_unicode_compatible
 class AbstractSourceType(models.Model):
     """
     A type of payment source.
@@ -217,14 +220,13 @@ class AbstractSourceType(models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class AbstractBankcard(models.Model):
     """
     Model representing a user's bankcard.  This is used for two purposes:
 
         1.  The bankcard form will return an instance of this model that can be
             used with payment gateways.  In this scenario, the instance will
-            have additional attributes (start_date, issue_number, ccv) that
+            have additional attributes (start_date, issue_number, :abbr:`ccv (Card Code Verification)`) that
             payment gateways need but that we don't save.
 
         2.  To keep a record of a user's bankcards and allow them to be
@@ -237,8 +239,11 @@ class AbstractBankcard(models.Model):
         store those fields then the requirements for PCI compliance will be
         more stringent.
     """
-    user = models.ForeignKey(AUTH_USER_MODEL, related_name='bankcards',
-                             verbose_name=_("User"))
+    user = models.ForeignKey(
+        AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='bankcards',
+        verbose_name=_("User"))
     card_type = models.CharField(_("Card Type"), max_length=128)
 
     # Often you don't actually need the name on the bankcard
@@ -262,7 +267,7 @@ class AbstractBankcard(models.Model):
     ccv = None
 
     def __str__(self):
-        return _(u"%(card_type)s %(number)s (Expires: %(expiry)s)") % {
+        return _("%(card_type)s %(number)s (Expires: %(expiry)s)") % {
             'card_type': self.card_type,
             'number': self.number,
             'expiry': self.expiry_month()}
@@ -272,7 +277,7 @@ class AbstractBankcard(models.Model):
         self.start_date = kwargs.pop('start_date', None)
         self.issue_number = kwargs.pop('issue_number', None)
         self.ccv = kwargs.pop('ccv', None)
-        super(AbstractBankcard, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Initialise the card-type
         if self.id is None:
@@ -289,12 +294,12 @@ class AbstractBankcard(models.Model):
     def save(self, *args, **kwargs):
         if not self.number.startswith('X'):
             self.prepare_for_save()
-        super(AbstractBankcard, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def prepare_for_save(self):
         # This is the first time this card instance is being saved.  We
         # remove all sensitive data
-        self.number = u"XXXX-XXXX-XXXX-%s" % self.number[-4:]
+        self.number = "XXXX-XXXX-XXXX-%s" % self.number[-4:]
         self.start_date = self.issue_number = self.ccv = None
 
     @property
@@ -303,7 +308,7 @@ class AbstractBankcard(models.Model):
 
     @property
     def obfuscated_number(self):
-        return u'XXXX-XXXX-XXXX-%s' % self.number[-4:]
+        return 'XXXX-XXXX-XXXX-%s' % self.number[-4:]
 
     def start_month(self, format='%m/%y'):
         return self.start_date.strftime(format)

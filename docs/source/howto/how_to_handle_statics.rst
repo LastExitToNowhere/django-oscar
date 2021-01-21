@@ -1,3 +1,8 @@
+.. spelling::
+
+    NGINX
+    Gulp
+
 ================================
 How to change Oscar's appearance
 ================================
@@ -11,7 +16,7 @@ Overview
 ========
 
 Oscar ships with a set of HTML templates and a collection of static files
-(eg images, javascript).  Oscar's default CSS is generated from LESS
+(e.g. images and Javascript).  Oscar's default CSS is generated from LESS
 files.
 
 Templates
@@ -34,20 +39,22 @@ On the other hand, ``dashboard.less`` just contains a few customisations that
 are included alongside a copy of stock Bootstrap CSS - and at the time of
 writing, using a different Bootstrap version.
 
+.. _less-css:
+
 LESS/CSS
 --------
 
 By default, CSS files compiled from their LESS sources are used rather than the
-LESS ones.  To use Less directly, set ``USE_LESS = True`` in your settings file.
-This will enable the on-the-fly pre-processor which lets you trial changes with
-a page reload. If you want to commit your changes, use the ``make css`` Makefile
-command, making sure you have the ``lessc`` binary available on your command line.
-A few other CSS files are used to provide styles for javascript libraries.
+LESS ones.  To use Less directly, set ``OSCAR_USE_LESS = True`` in your settings file.
+This will enable browser LESS pre-processor which lets you trial changes with
+a page reload. If you want to commit your changes, use the :command:`make css`
+command, which uses Gulp for compiling into CSS. A few other CSS files are
+used to provide styles for Javascript libraries.
 
 Javascript
 ----------
 
-Oscar uses javascript for progressive enhancements. This guide used to document
+Oscar uses Javascript for progressive enhancements. This guide used to document
 exact versions, but quickly became outdated. It is recommended to inspect
 ``layout.html`` and ``dashboard/layout.html`` for what is currently included.
 
@@ -70,7 +77,7 @@ Customising statics
 Oscar's static files are stored in ``oscar/static``.  When a Django site is
 deployed, the ``collectstatic`` command is run which collects static files from
 all installed apps and puts them in a single location (called the
-``STATIC_ROOT``).  It is common for a separate HTTP server (like nginx) to be
+``STATIC_ROOT``).  It is common for a separate HTTP server (like NGINX) to be
 used to serve these files, setting its document root to ``STATIC_ROOT``.
 
 For an individual project, you may want to override Oscar's static files.  The

@@ -11,7 +11,7 @@ register = template.Library()
 QNT_SINGLE, QNT_MULTIPLE = 'single', 'multiple'
 
 
-@register.assignment_tag()
+@register.simple_tag
 def basket_form(request, product, quantity_type='single'):
     if not isinstance(product, Product):
         return ''

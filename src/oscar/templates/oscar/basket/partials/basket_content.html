@@ -1,5 +1,5 @@
 {% load i18n %}
-{% load thumbnail %}
+{% load image_tags %}
 {% load currency_filters %}
 {% load purchase_info_tags %}
 {% load widget_tweaks %}
@@ -7,7 +7,7 @@
 {% if basket_warnings %}
     <h5>{% trans "Important messages about items in your basket" %}</h5>
     {% for warning in basket_warnings %}
-        <div class="alert">{{ warning }}</div>
+        <div class="alert alert-warning">{{ warning }}</div>
     {% endfor %}
 {% endif %}
 
@@ -35,7 +35,7 @@
     {% endblock %}
 
     {% block basket_form_main %}
-        <form action="." method="post" class="basket_summary" id="basket_formset">
+        <form method="post" class="basket_summary" id="basket_formset">
             {% csrf_token %}
             {{ formset.management_form }}
 
@@ -47,11 +47,10 @@
                             <div class="col-sm-2">
                                 {{ form.id }}
                                 {% with image=product.primary_image %}
-                                    {% thumbnail image.original "100x100" upscale=False as thumb %}
-                                        <a href="{{ product.get_absolute_url }}">
-                                            <img class="thumbnail" src="{{ thumb.url }}" alt="{{ product.get_title }}"/>
-                                        </a>
-                                    {% endthumbnail %}
+                                    {% oscar_thumbnail image.original "100x100" upscale=False as thumb %}
+                                    <a href="{{ product.get_absolute_url }}">
+                                        <img class="thumbnail" src="{{ thumb.url }}" alt="{{ product.get_title }}"/>
+                                    </a>
                                 {% endwith %}
                             </div>
                             <div class="col-sm-4">
@@ -86,22 +85,30 @@
 
                             </div>
                             <div class="col-sm-1">
-                                <p class="price_color align-right">
-                                    {% if line.is_tax_known %}
-                                        {{ line.unit_price_incl_tax|currency:line.price_currency }}
-                                    {% else %}
-                                        {{ line.unit_price_excl_tax|currency:line.price_currency }}
-                                    {% endif %}
-                                </p>
+                                {% if not line.unit_price_incl_tax and not line.unit_tax_excl_tax %}
+                                    <p class="align-right">&mdash;</p>
+                                {% else %}
+                                    <p class="price_color align-right">
+                                        {% if line.is_tax_known %}
+                                            {{ line.unit_price_incl_tax|currency:line.price_currency }}
+                                        {% else %}
+                                            {{ line.unit_price_excl_tax|currency:line.price_currency }}
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
                             </div>
                             <div class="col-sm-2">
-                                <p class="price_color align-right">
-                                    {% if line.is_tax_known %}
-                                        {{ line.line_price_incl_tax|currency:line.price_currency }}
-                                    {% else %}
-                                        {{ line.line_price_excl_tax|currency:line.price_currency }}
-                                    {% endif %}
-                                </p>
+                                {% if not line.line_price_incl_tax and not line_price_excl_tax %}
+                                    <p class="align-right">&mdash;</p>
+                                {% else %}
+                                    <p class="price_color align-right">
+                                        {% if line.is_tax_known %}
+                                            {{ line.line_price_incl_tax|currency:line.price_currency }}
+                                        {% else %}
+                                            {{ line.line_price_excl_tax|currency:line.price_currency }}
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -123,7 +130,7 @@
                     <div id="voucher_form_container" style="display:none">
                         <form id="voucher_form" action="{% url 'basket:vouchers-add' %}" method="post">
                             {% csrf_token %}
-                            {% include "partials/form_fields.html" with form=voucher_form %}
+                            {% include "oscar/partials/form_fields.html" with form=voucher_form %}
                             <button type="submit" class="btn btn-info" data-loading-text="{% trans 'Adding...' %}">{% trans "Add voucher" %}</button>
                             {% trans "or" %} <a href="#" id="voucher_form_cancel">{% trans "cancel" %}</a>
                         </form>
@@ -137,7 +144,7 @@
                 <div class="sub-header">
                     <h2>{% trans "Totals" %}</h2>
                 </div>
-                {% include 'basket/partials/basket_totals.html' with editable=1 %}
+                {% include 'oscar/basket/partials/basket_totals.html' with editable=1 %}
             </div>
         {% endblock baskettotals %}
     </div>
@@ -183,11 +190,10 @@
                             <div class="col-sm-2">
                                 {{ form.id }}
                                 {% with image=form.instance.product.primary_image %}
-                                    {% thumbnail image.original "100x100" upscale=False as thumb %}
-                                        <a href="{{ form.instance.product.get_absolute_url }}">
-                                            <img class="thumbnail" src="{{ thumb.url }}" alt="{{ form.instance.product.get_title }}">
-                                        </a>
-                                    {% endthumbnail %}
+                                    {% oscar_thumbnail image.original "100x100" upscale=False as thumb %}
+                                    <a href="{{ form.instance.product.get_absolute_url }}">
+                                        <img class="thumbnail" src="{{ thumb.url }}" alt="{{ form.instance.product.get_title }}">
+                                    </a>
                                 {% endwith %}
                             </div>
                             <div class="col-sm-6">

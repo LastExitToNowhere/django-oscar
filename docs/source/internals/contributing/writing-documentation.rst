@@ -6,6 +6,9 @@ Directory Structure
 -------------------
 
 The docs are built by calling ``make docs`` from your Oscar directory.
+The ``make docs`` command currently uses `python3`,
+so make sure it links to one of these versions.
+
 They live in ``/docs/source``. This directory structure is a
 simplified version of what Django does.
 
@@ -33,6 +36,5 @@ Please carefully review style guides for `Python`_ and `Django`_.
 Please use `gender-neutral language`_.
 
 .. _`Python`: http://docs.python.org/devguide/documenting.html#style-guide
-.. _`Django`: https://docs.djangoproject.com/en/dev/internals/contributing/writing-documentation/
+.. _`Django`: https://docs.djangoproject.com/en/stable/internals/contributing/writing-documentation/
 .. _`gender-neutral language`: https://alexgaynor.net/2013/nov/30/gender-neutral-language-faq/
-

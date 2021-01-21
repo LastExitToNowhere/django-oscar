@@ -1,5 +1,4 @@
-{% extends "layout.html" %}
-{% load thumbnail %}
+{% extends "oscar/layout.html" %}
 {% load i18n %}
 
 {% block title %}
@@ -24,7 +23,7 @@
 
 {% block content %}
     {# Use a partial template so that AJAX can be used to re-render basket #}
-    {% include 'basket/partials/basket_content.html' %}
+    {% include 'oscar/basket/partials/basket_content.html' %}
 {% endblock content %}
 
 {% block onbodyload %}
